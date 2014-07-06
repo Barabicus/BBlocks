@@ -35,6 +35,10 @@ public abstract class SlantedBlock : IBlock {
 
     public virtual Vector2 BottomUV { get { return TopUV; } }
 
+    public bool IsOpaque
+    {
+        get { return true; }
+    }
 
     public void ConstructBlock(int x, int y, int z, Chunk chunk)
     {
@@ -215,4 +219,15 @@ public abstract class SlantedBlock : IBlock {
         chunk.uvMap.Add(new Vector2(BlockDetails.tUnit * texturePos.x, BlockDetails.tUnit * texturePos.y));
     }
 
+
+    public void BlockDestroyed(Chunk chunk)
+    {
+        throw new System.NotImplementedException();
+    }
+
+
+    public void BlockPlaced(Chunk chunk)
+    {
+        throw new System.NotImplementedException();
+    }
 }

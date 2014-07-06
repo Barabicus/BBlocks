@@ -1,8 +1,9 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 
-public class Chunk : MonoBehaviour
+public class Chunk : MonoBehaviour, IChunk
 {
 
     public const int chunkSize = 16;
@@ -21,15 +22,18 @@ public class Chunk : MonoBehaviour
     private Mesh mesh;
     private Mesh collisionMesh;
     private MeshCollider col;
+    private List<ITick> _tickableBlock;
 
-    public IBlock[, ,] blocks;
+    private IBlock[, ,] blocks;
 
+    private IntVector3 _chunkPosition;
+    private IntVector3 _chunkIndex;
     /// <summary>
     /// Cached position of this chunk's position. This can also be used as a key to retrieve the chunk
     /// in the world chunk list.
     /// </summary>
-    public IntVector3 ChunkPosition { get; private set; }
-    public bool IsMeshDirty { get; set; }
+    public IntVector3 ChunkPosition { get { return _chunkPosition; } }
+    private bool IsMeshDirty { get; set; }
 
     public IBlock this[int x, int y, int z]
     {
@@ -45,10 +49,32 @@ public class Chunk : MonoBehaviour
         }
     }
 
+    public IBlock[, ,] Blocks
+    {
+        get { return blocks; }
+    }
+
+    public World World
+    {
+        get { return world;}
+    }
+
+    public List<ITick> TickableBlocks
+    {
+        get { return _tickableBlock; }
+    }
+
+
+    void Awake()
+    {
+        _tickableBlock = new List<ITick>();
+        _chunkPosition = new IntVector3(transform.position);
+        _chunkIndex = _chunkPosition / Chunk.chunkSize;
+        blocks = new IBlock[chunkSize, chunkSize, chunkSize];
+    }
+
     void Start()
     {
-        ChunkPosition = new IntVector3(transform.position);
-        blocks = new IBlock[chunkSize, chunkSize, chunkSize];
         mesh = GetComponent<MeshFilter>().mesh;
         col = GetComponent<MeshCollider>();
         collisionMesh = new Mesh();
@@ -63,6 +89,24 @@ public class Chunk : MonoBehaviour
 
 
     #region Block
+
+    public IBlock GetBlockRelativePosition(int x, int y, int z)
+    {
+        if (x >= 0 && x <= Chunk.chunkSize - 1 && y >= 0 && y <= Chunk.chunkSize - 1 && z >= 0 && z <= Chunk.chunkSize - 1)
+        {
+            return GetBlock(x, y, z);
+        }
+        else
+        {
+            return world.GetBlockWorldCoordinate(ChunkPosition + new IntVector3(x, y, z));
+        }
+    }
+
+    public IBlock GetBlockRelativePosition(IntVector3 localPos)
+    {
+        return GetBlockRelativePosition(localPos.x, localPos.y, localPos.z);
+    }
+
     /// <summary>
     /// Get block in relative position to this chunk. I.e block 0, 0, 0 is the first block in this chunk.
     /// </summary>
@@ -75,6 +119,7 @@ public class Chunk : MonoBehaviour
         // Is within range
         if (x < 0 || y < 0 || z < 0 || x >= blocks.GetLength(0) || y >= blocks.GetLength(1) || z >= blocks.GetLength(2))
         {
+            //Debug.LogError("not within range: " + new IntVector3(x,y,z));
             return null;
         }
         return blocks[x, y, z];
@@ -83,6 +128,28 @@ public class Chunk : MonoBehaviour
     public IBlock GetBlock(IntVector3 vector)
     {
         return GetBlock(vector.x, vector.y, vector.z);
+    }
+
+    /// <summary>
+    /// Takes in a block reference and returns its local position within the chunk. If the block cannot be found
+    /// in this chunk it returns null.
+    /// </summary>
+    /// <param name="block"></param>
+    /// <returns></returns>
+    public IntVector3? BlockToLocalPosition(Block block)
+    {
+        for (int x = 0; x < blocks.GetLength(0); x++)
+        {
+            for (int y = 0; y < blocks.GetLength(1); y++)
+            {
+                for (int z = 0; z < blocks.GetLength(2); z++)
+                {
+                    if (blocks[x, y, z] == block)
+                        return new IntVector3(x, y, z);
+                }
+            }
+        }
+        return null;
     }
 
     /// <summary>
@@ -95,6 +162,11 @@ public class Chunk : MonoBehaviour
     public IntVector3 LocalPositionToWorldPosition(int x, int y, int z)
     {
         return new IntVector3(ChunkPosition.x + x, ChunkPosition.y + y, ChunkPosition.z + z);
+    }
+
+    public IntVector3 LocalPositionToWorldPosition(IntVector3 vector)
+    {
+        return LocalPositionToWorldPosition(vector.x, vector.y, vector.z);
     }
 
     /// <summary>
@@ -126,47 +198,52 @@ public class Chunk : MonoBehaviour
         {
             return false;
         }
+        if (blocks[x, y, z] != null)
+            blocks[x, y, z].BlockDestroyed(this);
         blocks[x, y, z] = value;
+        if (blocks[x, y, z] != null)
+            blocks[x, y, z].BlockPlaced(this);
         CreateMesh();
 
         //If we hit a block bordering a neighbouring chunk update that chunk as well
         if (x == 0)
         {
-            Chunk c = world.WorldCoordinateToChunk(ChunkPosition.x - chunkSize, ChunkPosition.y, ChunkPosition.z);
+            IChunk c = world.GetChunkWorldCoordinate(ChunkPosition.x - chunkSize, ChunkPosition.y, ChunkPosition.z);
             if (c != null)
                 c.CreateMesh();
         }
         if (y == 0)
         {
-            Chunk c = world.WorldCoordinateToChunk(ChunkPosition.x, ChunkPosition.y - chunkSize, ChunkPosition.z);
+            IChunk c = world.GetChunkWorldCoordinate(ChunkPosition.x, ChunkPosition.y - chunkSize, ChunkPosition.z);
             if (c != null)
                 c.CreateMesh();
         }
         if (z == 0)
         {
-            Chunk c = world.WorldCoordinateToChunk(ChunkPosition.x, ChunkPosition.y, ChunkPosition.z - chunkSize);
+            IChunk c = world.GetChunkWorldCoordinate(ChunkPosition.x, ChunkPosition.y, ChunkPosition.z - chunkSize);
             if (c != null)
                 c.CreateMesh();
         }
 
         if (x == chunkSize - 1)
         {
-            Chunk c = world.WorldCoordinateToChunk(ChunkPosition.x + chunkSize, ChunkPosition.y, ChunkPosition.z);
+            IChunk c = world.GetChunkWorldCoordinate(ChunkPosition.x + chunkSize, ChunkPosition.y, ChunkPosition.z);
             if (c != null)
                 c.CreateMesh();
         }
         if (y == chunkSize - 1)
         {
-            Chunk c = world.WorldCoordinateToChunk(ChunkPosition.x, ChunkPosition.y + chunkSize, ChunkPosition.z);
+            IChunk c = world.GetChunkWorldCoordinate(ChunkPosition.x, ChunkPosition.y + chunkSize, ChunkPosition.z);
             if (c != null)
                 c.CreateMesh();
         }
         if (z == chunkSize - 1)
         {
-            Chunk c = world.WorldCoordinateToChunk(ChunkPosition.x, ChunkPosition.y, ChunkPosition.z + chunkSize);
+            IChunk c = world.GetChunkWorldCoordinate(ChunkPosition.x, ChunkPosition.y, ChunkPosition.z + chunkSize);
             if (c != null)
                 c.CreateMesh();
         }
+
 
         return true;
     }
@@ -183,8 +260,7 @@ public class Chunk : MonoBehaviour
 
     private void UpdateMesh()
     {
-       // CreateMesh();
-
+      //  CreateMesh();
         mesh.Clear();
         mesh.vertices = meshVertices.ToArray();
         mesh.uv = uvMap.ToArray();
@@ -213,46 +289,47 @@ public class Chunk : MonoBehaviour
 
     }
 
+    /*
     /// <summary>
     /// Updates all neighbouring chunks without any block checking.
     /// </summary>
     private void UpdateNeighbouringChunks()
     {
 
-        Chunk chunk = null;
+        IChunk chunk = null;
 
-        chunk = world.WorldCoordinateToChunk(ChunkPosition.x - chunkSize, ChunkPosition.y, ChunkPosition.z);
+        chunk = world.GetChunkWorldCoordinate(ChunkPosition.x - chunkSize, ChunkPosition.y, ChunkPosition.z);
         if (chunk != null)
-            chunk.CreateMesh();
+            chunk.UpdateMesh();
         chunk = null;
 
-        chunk = world.WorldCoordinateToChunk(ChunkPosition.x, ChunkPosition.y - chunkSize, ChunkPosition.z);
+        chunk = world.GetChunkWorldCoordinate(ChunkPosition.x, ChunkPosition.y - chunkSize, ChunkPosition.z);
         if (chunk != null)
-            chunk.CreateMesh();
+            chunk.UpdateMesh();
         chunk = null;
 
-        chunk = world.WorldCoordinateToChunk(ChunkPosition.x, ChunkPosition.y, ChunkPosition.z - chunkSize);
+        chunk = world.GetChunkWorldCoordinate(ChunkPosition.x, ChunkPosition.y, ChunkPosition.z - chunkSize);
         if (chunk != null)
-            chunk.CreateMesh();
+            chunk.UpdateMesh();
         chunk = null;
 
-        chunk = world.WorldCoordinateToChunk(ChunkPosition.x + chunkSize, ChunkPosition.y, ChunkPosition.z);
+        chunk = world.GetChunkWorldCoordinate(ChunkPosition.x + chunkSize, ChunkPosition.y, ChunkPosition.z);
         if (chunk != null)
-            chunk.CreateMesh();
+            chunk.UpdateMesh();
         chunk = null;
 
-        chunk = world.WorldCoordinateToChunk(ChunkPosition.x, ChunkPosition.y + chunkSize, ChunkPosition.z);
+        chunk = world.GetChunkWorldCoordinate(ChunkPosition.x, ChunkPosition.y + chunkSize, ChunkPosition.z);
         if (chunk != null)
-            chunk.CreateMesh();
+            chunk.UpdateMesh();
         chunk = null;
 
-        chunk = world.WorldCoordinateToChunk(ChunkPosition.x, ChunkPosition.y, ChunkPosition.z + chunkSize);
+        chunk = world.GetChunkWorldCoordinate(ChunkPosition.x, ChunkPosition.y, ChunkPosition.z + chunkSize);
         if (chunk != null)
-            chunk.CreateMesh();
+            chunk.UpdateMesh();
 
-    }
+    }*/
 
-    public void CreateMesh()
+    public void ForceCreateMesh()
     {
         for (int x = 0; x < blocks.GetLength(0); x++)
         {
@@ -268,14 +345,27 @@ public class Chunk : MonoBehaviour
         IsMeshDirty = true;
     }
 
+    bool isMeshCreating = false;
+    public void CreateMesh()
+    {
+        if (!isMeshCreating)
+        {
+            isMeshCreating = true;
+            StartCoroutine(CreateMeshCoroutine());
+        }
+    }
+
+    IEnumerator CreateMeshCoroutine()
+    {
+        yield return new WaitForEndOfFrame();
+        ForceCreateMesh();
+        isMeshCreating = false;
+    }
 
     #endregion
 
-    #region Helper Methods
 
-
-
-    #endregion
-
-
+    public void Tick()
+    {
+    }
 }

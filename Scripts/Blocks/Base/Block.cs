@@ -11,7 +11,7 @@ public abstract class Block : IBlock
     /// and return the UV vector that you wish to display. By default every other face is setup to return
     /// the top UV unless overloaded.
     /// </summary>
-    public virtual Vector2 TopUV { get{return BlockDetails.nullUV; }}
+    public virtual Vector2 TopUV { get { return BlockDetails.nullUV; } }
     /// <summary>
     /// Return the Top UV by default unless overloaded
     /// </summary>
@@ -36,54 +36,56 @@ public abstract class Block : IBlock
 
     public virtual Vector2 BottomUV { get { return TopUV; } }
 
+    /// <summary>
+    /// Is this block transparent, false by default
+    /// </summary>
+    public bool IsOpaque
+    {
+        get { return false; }
+    }
 
     public void ConstructBlock(int x, int y, int z, Chunk chunk)
     {
-        // If the block is not air
-        if (BlockID != null)
-        {
-            if (chunk.world.GetBlockWorldCoordinate(chunk.ChunkPosition + new IntVector3(x, y + 1, z)) == null)
+            if (chunk.GetBlockRelativePosition(x, y + 1, z) == null)
             {
                 //Block above is air
                 CreateTopFace(x, y, z, chunk);
             }
 
-            if (chunk.world.GetBlockWorldCoordinate(chunk.ChunkPosition + new IntVector3(x, y - 1, z)) == null)
+            if (chunk.GetBlockRelativePosition(x, y - 1, z) == null)
             {
                 //Block below is air
                 CreateBottomFace(x, y, z, chunk);
 
             }
 
-            if (chunk.world.GetBlockWorldCoordinate(chunk.ChunkPosition + new IntVector3(x + 1, y, z)) == null)
+            if (chunk.GetBlockRelativePosition(x + 1, y, z) == null)
             {
                 //Block east is air
                 CreateEastFace(x, y, z, chunk);
 
             }
 
-
-            if (chunk.world.GetBlockWorldCoordinate(chunk.ChunkPosition + new IntVector3(x - 1, y, z)) == null)
+            if (chunk.GetBlockRelativePosition(x - 1, y, z) == null)
             {
                 //Block west is air
                 CreateWestFace(x, y, z, chunk);
 
             }
 
-            if (chunk.world.GetBlockWorldCoordinate(chunk.ChunkPosition + new IntVector3(x, y, z + 1)) == null)
+            if (chunk.GetBlockRelativePosition(x, y, z + 1) == null)
             {
                 //Block north is air
                 CreateNorthFace(x, y, z, chunk);
 
             }
 
-            if (chunk.world.GetBlockWorldCoordinate(chunk.ChunkPosition + new IntVector3(x, y, z - 1)) == null)
+            if (chunk.GetBlockRelativePosition(x, y, z - 1) == null)
             {
                 //Block south is air
                 CreateSouthFace(x, y, z, chunk);
 
             }
-        }
     }
     protected void CreateTopFace(int x, int y, int z, Chunk chunk)
     {
@@ -185,7 +187,7 @@ public abstract class Block : IBlock
         AddCollisionTriangles(chunk);
         AddUV(EastUV, chunk);
     }
-     
+
     protected void AddMeshTriangles(Chunk chunk)
     {
         chunk.meshTriangles.Add(chunk.meshFaceCount * 4);
@@ -215,10 +217,24 @@ public abstract class Block : IBlock
         chunk.uvMap.Add(new Vector2(BlockDetails.tUnit * texturePos.x, BlockDetails.tUnit * texturePos.y + BlockDetails.tUnit));
         chunk.uvMap.Add(new Vector2(BlockDetails.tUnit * texturePos.x, BlockDetails.tUnit * texturePos.y));
 
+        /*
         chunk.uvMap2.Add(new Vector2(BlockDetails.tUnit * BlockDetails.unbreakableUV.x + BlockDetails.tUnit, BlockDetails.tUnit * BlockDetails.unbreakableUV.y));
         chunk.uvMap2.Add(new Vector2(BlockDetails.tUnit * BlockDetails.unbreakableUV.x + BlockDetails.tUnit, BlockDetails.tUnit * BlockDetails.unbreakableUV.y + BlockDetails.tUnit));
         chunk.uvMap2.Add(new Vector2(BlockDetails.tUnit * BlockDetails.unbreakableUV.x, BlockDetails.tUnit * BlockDetails.unbreakableUV.y + BlockDetails.tUnit));
         chunk.uvMap2.Add(new Vector2(BlockDetails.tUnit * BlockDetails.unbreakableUV.x, BlockDetails.tUnit * BlockDetails.unbreakableUV.y));
+         */
     }
 
+
+    public void BlockDestroyed(Chunk chunk)
+    {
+        if (this is ITick)
+            chunk.TickableBlocks.Remove(this as ITick);
+    }
+
+    public void BlockPlaced(Chunk chunk)
+    {
+        if (this is ITick)
+            chunk.TickableBlocks.Add(this as ITick);
+    }
 }

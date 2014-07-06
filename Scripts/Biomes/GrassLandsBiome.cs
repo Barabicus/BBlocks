@@ -5,23 +5,23 @@ using System.Text;
 
 public class GrassLandsBiome : MonoBehaviour, IBiomeGenerator
 {
-  //  public AnimationCurve heightCurve = AnimationCurve.Linear(0, 1, 1, 1);
+    //  public AnimationCurve heightCurve = AnimationCurve.Linear(0, 1, 1, 1);
     public AnimationCurve perlinCurve = AnimationCurve.Linear(0, 1, 1, 1);
 
     public float zoom = 1f;
     public bool abs = true;
 
-    public void GenerateBiome(Chunk chunk)
+    public void GenerateBiome(IChunk chunk)
     {
-        for (int x = 0; x < chunk.blocks.GetLength(0); x++)
+        for (int x = 0; x < chunk.Blocks.GetLength(0); x++)
         {
-            for (int y = 0; y < chunk.blocks.GetLength(1); y++)
+            for (int y = 0; y < chunk.Blocks.GetLength(1); y++)
             {
-                for (int z = 0; z < chunk.blocks.GetLength(2); z++)
+                for (int z = 0; z < chunk.Blocks.GetLength(2); z++)
                 {
                     IntVector3 blockPosition = chunk.LocalPositionToWorldPosition(x, y, z);
-                    float lands = GrassPerlin(blockPosition, chunk.world.maxHeight);
-                    float cave = CavePerlin(blockPosition, chunk.world.maxHeight);
+                    float lands = GetPerlin(blockPosition, chunk.World.maxHeight);
+                    float cave = CavePerlin(blockPosition, chunk.World.maxHeight);
 
                     if (blockPosition.y == 0)
                     {
@@ -31,14 +31,14 @@ public class GrassLandsBiome : MonoBehaviour, IBiomeGenerator
 
                     if (chunk.ChunkPosition.y + y < 60f)
                     {
-                        if(cave > 0.085f)
-                        chunk[x, y, z] = new StoneBlock();
+                        if (cave > 0.085f)
+                            chunk[x, y, z] = new StoneBlock();
                     }
                     else if (chunk.ChunkPosition.y + y < 128f)
                     {
-                        if (lands >= (blockPosition.y) / (float)chunk.world.maxHeight)
+                        if (lands >= (blockPosition.y) / (float)chunk.World.maxHeight)
                         {
-                            if (GrassPerlin(blockPosition + new IntVector3(0, 1, 0), chunk.world.maxHeight) < (blockPosition.y + 1) / (float)chunk.world.maxHeight)
+                            if (GetPerlin(blockPosition + new IntVector3(0, 1, 0), chunk.World.maxHeight) < (blockPosition.y + 1) / (float)chunk.World.maxHeight)
                                 chunk[x, y, z] = new GrassBlock();
                             else
                                 chunk[x, y, z] = new DirtBlock();
@@ -60,7 +60,7 @@ public class GrassLandsBiome : MonoBehaviour, IBiomeGenerator
         return -tunnel;
     }
 
-    float GrassPerlin(IntVector3 blockPosition, int maxHeight)
+    public float GetPerlin(IntVector3 blockPosition, int maxHeight)
     {
         float lands = Mathf.PerlinNoise((blockPosition.x) / (float)maxHeight * zoom, (blockPosition.z) / (float)maxHeight * zoom);
         lands *= perlinCurve.Evaluate(lands);
@@ -73,7 +73,7 @@ public class GrassLandsBiome : MonoBehaviour, IBiomeGenerator
     float CavePerlin(IntVector3 blockPosition, int maxHeight)
     {
         float cave = Mathf.PerlinNoise(blockPosition.x / (float)maxHeight * zoom, blockPosition.z / (float)maxHeight * zoom);
-        cave *= Mathf.PerlinNoise(50 + blockPosition.x / (float)maxHeight * zoom,  50 + blockPosition.y / (float)maxHeight * zoom);
+        cave *= Mathf.PerlinNoise(50 + blockPosition.x / (float)maxHeight * zoom, 50 + blockPosition.y / (float)maxHeight * zoom);
         return cave;
     }
 

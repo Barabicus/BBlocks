@@ -3,5 +3,7 @@ using System.Collections;
 
 public interface IBiomeGenerator
 {
-    void GenerateBiome(Chunk chunk);
+    void GenerateBiome(IChunk chunk);
+
+    float GetPerlin(IntVector3 chunkPosition, int maxHeight);
 }

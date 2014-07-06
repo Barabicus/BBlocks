@@ -8,18 +8,19 @@ public class GenericBiome : MonoBehaviour, IBiomeGenerator
 
     public AnimationCurve perlinStrength = AnimationCurve.Linear(0, 1, 1, 1);
     public float Octaves = 4.5f;
+    public float TopDownOctaves = 6f;
     public float HeightWeight = 4.5f;
 
-    public void GenerateBiome(Chunk chunk)
+    public void GenerateBiome(IChunk chunk)
     {
-        for (int x = 0; x < chunk.blocks.GetLength(0); x++)
+        for (int x = 0; x < chunk.Blocks.GetLength(0); x++)
         {
-            for (int y = 0; y < chunk.blocks.GetLength(1); y++)
+            for (int y = 0; y < chunk.Blocks.GetLength(1); y++)
             {
-                for (int z = 0; z < chunk.blocks.GetLength(2); z++)
+                for (int z = 0; z < chunk.Blocks.GetLength(2); z++)
                 {
                     IntVector3 blockPosition = chunk.LocalPositionToWorldPosition(x, y, z);
-                    float Overhang = HeightPerlin(blockPosition, chunk.world.maxHeight);
+                    float Overhang = GetPerlin(blockPosition, chunk.World.maxHeight);
 
                     if (blockPosition.y < GrassStartPos)
                     {
@@ -29,7 +30,7 @@ public class GenericBiome : MonoBehaviour, IBiomeGenerator
                     {
                         if (Overhang > 0.5f)
                         {
-                            if (HeightPerlin(blockPosition + new IntVector3(0, 1, 0), chunk.world.maxHeight) > 0.5f)
+                            if (GetPerlin(blockPosition + new IntVector3(0, 1, 0), chunk.World.maxHeight) > 0.5f)
                                 chunk[x, y, z] = new DirtBlock();
                             else
                                 chunk[x, y, z] = new GrassBlock();
@@ -47,7 +48,7 @@ public class GenericBiome : MonoBehaviour, IBiomeGenerator
     }
 
 
-    float HeightPerlin(IntVector3 blockPosition, int maxHeight)
+    public float GetPerlin(IntVector3 blockPosition, int maxHeight)
     {
     //    float perlin = Mathf.PerlinNoise((blockPosition.x / (float)maxHeight) * Octaves, (blockPosition.y / (float)maxHeight) * Octaves);
         float perlin = SimplexNoise.Noise( blockPosition.x / (float)maxHeight * Octaves, blockPosition.y / (float)maxHeight * Octaves, blockPosition.z  / (float)maxHeight * Octaves);
@@ -63,7 +64,7 @@ public class GenericBiome : MonoBehaviour, IBiomeGenerator
 
     float TopDownPerlin(IntVector3 blockPosition, int maxHeight)
     {
-        float perlin = Mathf.PerlinNoise((blockPosition.x / (float)maxHeight) * Octaves, (blockPosition.z / (float)maxHeight) * Octaves);
+        float perlin = Mathf.PerlinNoise((blockPosition.x / (float)maxHeight) * TopDownOctaves, (blockPosition.z / (float)maxHeight) * TopDownOctaves);
         perlin *= HeightMod(blockPosition, maxHeight);
         return perlin;
     }
