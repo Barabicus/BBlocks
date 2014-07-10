@@ -33,6 +33,7 @@ public class Chunk : MonoBehaviour, IChunk
     /// in the world chunk list.
     /// </summary>
     public IntVector3 ChunkPosition { get { return _chunkPosition; } }
+    public IntVector3 ChunkIndex { get { return _chunkIndex; } }
     private bool IsMeshDirty { get; set; }
 
     public IBlock this[int x, int y, int z]
@@ -59,13 +60,9 @@ public class Chunk : MonoBehaviour, IChunk
         get { return world;}
     }
 
-    public List<ITick> TickableBlocks
-    {
-        get { return _tickableBlock; }
-    }
 
 
-    void Awake()
+    public void Awake()
     {
         _tickableBlock = new List<ITick>();
         _chunkPosition = new IntVector3(transform.position);
@@ -73,7 +70,7 @@ public class Chunk : MonoBehaviour, IChunk
         blocks = new IBlock[chunkSize, chunkSize, chunkSize];
     }
 
-    void Start()
+    public void Start()
     {
         mesh = GetComponent<MeshFilter>().mesh;
         col = GetComponent<MeshCollider>();
@@ -136,7 +133,7 @@ public class Chunk : MonoBehaviour, IChunk
     /// </summary>
     /// <param name="block"></param>
     /// <returns></returns>
-    public IntVector3? BlockToLocalPosition(Block block)
+    public IntVector3? BlockToLocalPosition(IBlock block)
     {
         for (int x = 0; x < blocks.GetLength(0); x++)
         {
@@ -148,6 +145,16 @@ public class Chunk : MonoBehaviour, IChunk
                         return new IntVector3(x, y, z);
                 }
             }
+        }
+        return null;
+    }
+
+    public IntVector3? BlockToWorldPosition(IBlock block)
+    {
+        IntVector3? position = BlockToLocalPosition(block);
+        if (position.HasValue)
+        {
+            return new IntVector3?(LocalPositionToWorldPosition(position.Value));
         }
         return null;
     }
@@ -174,7 +181,7 @@ public class Chunk : MonoBehaviour, IChunk
     /// </summary>
     /// <param name="position"></param>
     /// <returns></returns>
-    public IntVector3 WorldPositionToLocal(IntVector3 position)
+    public IntVector3 WorldPositionToLocalPosition(IntVector3 position)
     {
         return position - ChunkPosition;
     }
@@ -264,7 +271,7 @@ public class Chunk : MonoBehaviour, IChunk
         mesh.Clear();
         mesh.vertices = meshVertices.ToArray();
         mesh.uv = uvMap.ToArray();
-        mesh.uv2 = uvMap2.ToArray();
+    //    mesh.uv2 = uvMap2.ToArray();
         mesh.triangles = meshTriangles.ToArray();
         mesh.Optimize();
         mesh.RecalculateNormals();
@@ -364,8 +371,37 @@ public class Chunk : MonoBehaviour, IChunk
 
     #endregion
 
+    #region Chunk Updates
+
+    public void AddTickableBlock(ITick tickable)
+    {
+        StartCoroutine(AddTickableBlockRoutine(tickable));
+    }
+
+    private IEnumerator AddTickableBlockRoutine(ITick tickable)
+    {
+        yield return new WaitForEndOfFrame();
+        _tickableBlock.Add(tickable);
+    }
+
+    public void RemoveTickableBlock(ITick tickable)
+    {
+        StartCoroutine(RemoveTickableBlockRoutine(tickable));
+    }
+
+    private IEnumerator RemoveTickableBlockRoutine(ITick tickable)
+    {
+        yield return new WaitForEndOfFrame();
+        _tickableBlock.Remove(tickable);
+    }
 
     public void Tick()
     {
+        foreach (ITick tickable in _tickableBlock)
+        {
+            tickable.Tick(this);
+        }
     }
+
+    #endregion
 }

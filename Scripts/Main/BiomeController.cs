@@ -7,11 +7,11 @@ public class BiomeController : MonoBehaviour
 
     public int seed = 1234555;
 
-    List<IBiomeGenerator> _biomes;
+    List<IBiome> _biomes;
 
     void Awake()
     {
-        _biomes = new List<IBiomeGenerator>();
+        _biomes = new List<IBiome>();
         Random.seed = seed;
     }
 
@@ -20,17 +20,27 @@ public class BiomeController : MonoBehaviour
     {
         foreach (Component c in transform.GetComponents<Component>())
         {
-            if (c is IBiomeGenerator)
-                _biomes.Add((IBiomeGenerator)c);
+            if (c is IBiome)
+                _biomes.Add((IBiome)c);
         }
     }
 
-    public IBiomeGenerator GetBiome(IChunk chunk)
+    public void GenerateChunk(IChunk chunk)
     {
-        float perlin = BiomeNoise(chunk.ChunkPosition.x, chunk.ChunkPosition.z);
-        perlin = Mathf.Abs(perlin);
-        perlin = Mathf.RoundToInt(perlin);
-        return _biomes[(int)perlin];
+        IBiome bg = _biomes[0];
+
+        for (int x = 0; x < chunk.Blocks.GetLength(0); x++)
+        {
+            for (int y = 0; y < chunk.Blocks.GetLength(1); y++)
+            {
+                for (int z = 0; z < chunk.Blocks.GetLength(2); z++)
+                {
+                    chunk[x, y, z] = bg.GetBlock(x, y, z);
+                }
+            }
+        }
+
+          //  bg.GenerateBiome(chunk);
     }
 
     float BiomeNoise(int x, int z)

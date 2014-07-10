@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 
-public class GrassLandsBiome : MonoBehaviour, IBiomeGenerator
+public class GrassLandsBiome : MonoBehaviour, IBiome
 {
     //  public AnimationCurve heightCurve = AnimationCurve.Linear(0, 1, 1, 1);
     public AnimationCurve perlinCurve = AnimationCurve.Linear(0, 1, 1, 1);
@@ -62,11 +62,12 @@ public class GrassLandsBiome : MonoBehaviour, IBiomeGenerator
 
     public float GetPerlin(IntVector3 blockPosition, int maxHeight)
     {
-        float lands = Mathf.PerlinNoise((blockPosition.x) / (float)maxHeight * zoom, (blockPosition.z) / (float)maxHeight * zoom);
+        float lands = SimplexNoise.Noise((blockPosition.x) / (float)maxHeight * zoom, (blockPosition.z) / (float)maxHeight * zoom);
         lands *= perlinCurve.Evaluate(lands);
         lands -= ((blockPosition.y) / maxHeight);
         if (abs)
-            lands += (1f * 0.5f);
+            if (lands < 0)
+                lands = 0.1f;
         return lands;
     }
 
@@ -77,4 +78,9 @@ public class GrassLandsBiome : MonoBehaviour, IBiomeGenerator
         return cave;
     }
 
+
+    public Block GetBlock(int x, int y, int z)
+    {
+        throw new System.NotImplementedException();
+    }
 }

@@ -222,12 +222,12 @@ public abstract class SlantedBlock : IBlock {
 
     public void BlockDestroyed(Chunk chunk)
     {
-        throw new System.NotImplementedException();
+    //    throw new System.NotImplementedException();
     }
 
 
     public void BlockPlaced(Chunk chunk)
     {
-        throw new System.NotImplementedException();
+    //    throw new System.NotImplementedException();
     }
 }

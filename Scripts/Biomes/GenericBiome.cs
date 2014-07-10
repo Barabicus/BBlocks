@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class GenericBiome : MonoBehaviour, IBiomeGenerator
+public class GenericBiome : MonoBehaviour, IBiome
 {
 
     public int GrassStartPos = 50;
@@ -74,4 +74,9 @@ public class GenericBiome : MonoBehaviour, IBiomeGenerator
         return ((maxHeight - blockPosition.y) / (float)maxHeight) * HeightWeight;
     }
 
+
+    public Block GetBlock(int x, int y, int z)
+    {
+        throw new System.NotImplementedException();
+    }
 }

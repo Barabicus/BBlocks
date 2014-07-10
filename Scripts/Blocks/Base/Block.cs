@@ -229,12 +229,12 @@ public abstract class Block : IBlock
     public void BlockDestroyed(Chunk chunk)
     {
         if (this is ITick)
-            chunk.TickableBlocks.Remove(this as ITick);
+            chunk.RemoveTickableBlock(this as ITick);
     }
 
     public void BlockPlaced(Chunk chunk)
     {
         if (this is ITick)
-            chunk.TickableBlocks.Add(this as ITick);
+            chunk.AddTickableBlock(this as ITick);
     }
 }

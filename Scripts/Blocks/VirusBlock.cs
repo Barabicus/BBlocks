@@ -24,10 +24,13 @@ public class VirusBlock : Block, ITick
         {
             IntVector3 blockPos = chunk.LocalPositionToWorldPosition(localPos.Value);
             chunk.world.SetBlockWorldCoordinate(blockPos + new IntVector3(0, 1, 0), new VirusBlock());
-            chunk.world.SetBlockWorldCoordinate(blockPos + new IntVector3(1, 0, 0), new VirusBlock());
+            chunk.world.SetBlockWorldCoordinate(blockPos + new IntVector3(0, -1, 0), new VirusBlock());
             chunk.world.SetBlockWorldCoordinate(blockPos + new IntVector3(-1, 0, 0), new VirusBlock());
+            chunk.world.SetBlockWorldCoordinate(blockPos + new IntVector3(1, 0, 0), new VirusBlock());
+            chunk.world.SetBlockWorldCoordinate(blockPos + new IntVector3(0, 0, 1), new VirusBlock());
+            chunk.world.SetBlockWorldCoordinate(blockPos + new IntVector3(0, 0, -1), new VirusBlock());
 
-          //  chunk.world.SetBlockWorldCoordinate(chunk.LocalPositionToWorldPosition(chunk.BlockToLocalPosition(this).Value), new StoneBlock());
+            chunk.SetBlock(localPos.Value, new StoneBlock());
         }
     }
 }

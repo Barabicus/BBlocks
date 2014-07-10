@@ -53,6 +53,16 @@ public struct IntVector3
         return new IntVector3(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z);
     }
 
+    public static IntVector3 operator *(IntVector3 v1, IntVector3 v2)
+    {
+        return new IntVector3(v1.x * v2.x, v1.y * v2.y, v1.z * v2.z);
+    }
+
+    public static IntVector3 operator *(IntVector3 v1, int v2)
+    {
+        return new IntVector3(v1.x * v2, v1.y * v2, v1.z * v2);
+    }
+
     public static IntVector3 operator /(IntVector3 v1, IntVector3 v2)
     {
         return new IntVector3(v1.x / v2.x, v1.y / v2.y, v1.z / v2.z);
@@ -61,6 +71,23 @@ public struct IntVector3
     public static IntVector3 operator /(IntVector3 v1, int i2)
     {
         return new IntVector3(v1.x / i2, v1.y / i2, v1.z / i2);
+    }
+
+    public void Abs()
+    {
+        x = x < 0 ? x * -1 : x;
+        y = y < 0 ? y * -1 : y;
+        z = z < 0 ? z * -1 : z;
+    }
+
+    public IntVector3 Absolute
+    {
+        get
+        {
+            IntVector3 abs = new IntVector3(x, y, z);
+            abs.Abs();
+            return abs;
+        }
     }
 
     public override string ToString()

@@ -1,14 +1,16 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class Player : Entity
+public class Player : Entity, IWorldAnchor
 {
 
+    public float gravity = 8f;
     public float drag = 5f;
     public float rotatePower = 5f;
     public float movePower = 50f;
     public float jumpPower = 10f;
     public World world;
+    public Transform highlightBlock;
     private Vector3 vel;
     private const int cursorWidth = 20;
     private Texture2D cursor;
@@ -42,7 +44,7 @@ public class Player : Entity
         }
         cursor.Apply();
 
-       // controller = GetComponent<CharacterController>();
+        // controller = GetComponent<CharacterController>();
         Screen.lockCursor = true;
     }
 
@@ -63,7 +65,7 @@ public class Player : Entity
         transform.Rotate(Vector3.right * -Input.GetAxis("Mouse Y") * rotatePower * Time.deltaTime);
         transform.rotation = Quaternion.Euler(transform.eulerAngles.x, transform.eulerAngles.y, 0);
 
-        vel = Vector3.Lerp(vel, Physics.gravity + new Vector3(0, vel.y, 0), Time.deltaTime * drag);
+        vel = Vector3.Lerp(vel, new Vector3(0, -gravity, 0) + new Vector3(0, vel.y, 0), Time.deltaTime * drag);
 
         //  vel = Vector3.zero;
         //  vel += (new Vector3(transform.forward.x, 0, transform.forward.z))* Input.GetAxis("Vertical") * movePower;
@@ -76,12 +78,27 @@ public class Player : Entity
             vel.y = -1f;
             if (Input.GetKeyDown(KeyCode.Space))
             {
-                vel += -Physics.gravity * jumpPower;
+                vel += new Vector3(0, gravity, 0) * jumpPower;
             }
         }
 
-
         controller.Move(vel * Time.deltaTime);
+
+        RaycastHit hitt;
+
+        if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hitt, 100f))
+        {
+            highlightBlock.gameObject.SetActive(true);
+            Vector3 pos;
+            world.RaycastHitToBlock(hitt, out pos);
+            pos += new Vector3(0.5f, -0.5f, 0.5f);
+            highlightBlock.transform.position = pos;
+        }
+        else
+        {
+            highlightBlock.gameObject.SetActive(false);
+        }
+
 
         if (Input.GetMouseButtonDown(0))
         {
@@ -98,8 +115,10 @@ public class Player : Entity
             RaycastHit hit;
             if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit, 100f))
             {
-                IntVector3 position = world.RaycastHitToFace(hit);
-                world.SetBlockWorldCoordinate(position, new VirusBlock());
+                    IntVector3 position = world.RaycastHitToFace(hit);
+                    world.SetBlockWorldCoordinate(position, new VirusBlock());
+              //  IntVector3 position = world.RaycastHitToBlock(hit);
+             //   Debug.Log("Block: " + world.GetBlockWorldCoordinate(position));
 
             }
         }
@@ -115,16 +134,13 @@ public class Player : Entity
                 world.SetBlockWorldCoordinate(position + new IntVector3(0, -1, 0), null);
                 world.SetBlockWorldCoordinate(position + new IntVector3(1, 0, 0), null);
                 world.SetBlockWorldCoordinate(position + new IntVector3(-1, 0, 0), null);
-           //     world.SetBlockWorldCoordinate(position + new IntVector3(0, 0, 1), null);
-          //      world.SetBlockWorldCoordinate(position + new IntVector3(0, 0, -1), null);
+                //     world.SetBlockWorldCoordinate(position + new IntVector3(0, 0, 1), null);
+                //      world.SetBlockWorldCoordinate(position + new IntVector3(0, 0, -1), null);
 
                 world.SetBlockWorldCoordinate(position + new IntVector3(1, 1, 0), null);
                 world.SetBlockWorldCoordinate(position + new IntVector3(-1, 1, 0), null);
                 world.SetBlockWorldCoordinate(position + new IntVector3(1, -1, 0), null);
                 world.SetBlockWorldCoordinate(position + new IntVector3(-1, -1, 0), null);
-
-
-
 
             }
         }
@@ -134,5 +150,10 @@ public class Player : Entity
     void OnGUI()
     {
         GUI.DrawTexture(new Rect((Screen.width / 2) - cursorWidth / 2, (Screen.height / 2) - cursorWidth / 2, cursorWidth, cursorWidth), cursor);
+    }
+
+    public Bounds AnchorBounds
+    {
+        get { return new Bounds(transform.position, new Vector3(Chunk.chunkSize * 10, Chunk.chunkSize * 8, Chunk.chunkSize * 10)); }
     }
 }

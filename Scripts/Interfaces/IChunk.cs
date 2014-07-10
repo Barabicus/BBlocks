@@ -9,6 +9,7 @@ public interface IChunk
     /// in the world chunk list.
     /// </summary>
     IntVector3 ChunkPosition { get; }
+    IntVector3 ChunkIndex { get; }
 
     IBlock this[int x, int y, int z] { get; set; }
 
@@ -42,7 +43,7 @@ public interface IChunk
     /// </summary>
     /// <param name="position"></param>
     /// <returns></returns>
-    IntVector3 WorldPositionToLocal(IntVector3 position);
+    IntVector3 WorldPositionToLocalPosition(IntVector3 position);
 
     /// <summary>
     /// Sets the block at local position x,y,z
