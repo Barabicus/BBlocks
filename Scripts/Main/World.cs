@@ -17,16 +17,17 @@ public class World : MonoBehaviour
     public BiomeController biome;
     public int maxHeight;
     public float TickFrequency = 5.0f;
+    public int ChunkThreads = 1;
 
     private float _lastTime;
     private List<IChunk> tempList = new List<IChunk>();
     private int loaded = 0;
     private int threadsRunning = 0;
     private List<IWorldAnchor> _worldAnchors;
-
+    private Vector3 _lastPosition;
     private Dictionary<IntVector3, IChunk> _chunks;
-    private Queue<IEnumerator> _meshQueue;
-    private List<Thread> _renderThreads;
+    private WorldGenerator _worldGenerator;
+
     //IChunk[, ,] _chunks = null;
 
     bool loading;
@@ -39,11 +40,14 @@ public class World : MonoBehaviour
         }
     }
 
+    public WorldGenerator WorldGenerator
+    {
+        get { return _worldGenerator; }
+    }
+
     public void Awake()
     {
         _chunks = new Dictionary<IntVector3, IChunk>();
-        _meshQueue = new Queue<IEnumerator>();
-        _renderThreads = new List<Thread>();
         _worldAnchors = new List<IWorldAnchor>();
         //  _chunks = new Chunk[ChunksX, ChunksY, ChunksZ];
     }
@@ -53,6 +57,7 @@ public class World : MonoBehaviour
         maxHeight = ChunksY * Chunk.chunkSize;
         _lastTime = Time.time;
         _worldAnchors.Add(player.Find("Camera").GetComponent<Player>());
+        _worldGenerator = new WorldGenerator(biome, maxHeight, ChunkThreads);
         GenerateChunks();
     }
 
@@ -62,15 +67,17 @@ public class World : MonoBehaviour
         if (loading)
         {
             GUILayout.BeginArea(new Rect(Screen.width / 2, Screen.height / 2, 250, 250));
-            //    GUILayout.Label("Loading: " + loaded + " / " + Chunks.Length);
             GUILayout.Label(loadLabel);
             GUILayout.EndArea();
         }
     }
 
+    public int posindexX = 0;
+    public int posindexZ = 0;
+
     void Update()
     {
-      //  UpdateChunkBounds();
+        UpdateChunkBounds();
 
         if (Time.time - _lastTime > TickFrequency)
         {
@@ -84,51 +91,79 @@ public class World : MonoBehaviour
 
     void UpdateChunkBounds()
     {
-        //IntVector3 chunkIndex = new IntVector3(bounds.center) + (new IntVector3(bounds.extents) / Chunk.chunkSize);
-        //for (int x = -chunkIndex.x; x < chunkIndex.x; x++)
-        //{
-        //    for (int z = -chunkIndex.z; z < chunkIndex.z; z++)
-        //    {
-        //        for (int y = 0; y < ChunksY; y++)
-        //        {
-        //       //     Debug.Log(new IntVector3(x, y, z));
-        //            if (!Chunks.ContainsKey(new IntVector3(x, y, z)))
-        //            {
-        //                IChunk ch = AddChunk(new IntVector3(x, y, z));
-        //                biome.GenerateChunk(ch);
-        //                ch.CreateMesh();
-        //            }
-        //        }
-        //    }
-        //}
 
-        for (int y = 0; y < ChunksY; y++)
+        Bounds playerBounds = _worldAnchors[0].WorldBounds;
+        for (int xIndex = 0, zIndex = 0; xIndex < (int)playerBounds.extents.x / Chunk.chunkSize; xIndex++, zIndex++)
         {
-            Vector3 pos = player.transform.position;
-            pos.y = 0;
-            if (!Chunks.ContainsKey(WorldCoordinateToChunkIndex(pos + new Vector3(0, y * Chunk.chunkSize,0))))
+            for (int y = 0; y < ChunksY; y++)
             {
-                IChunk ch = AddChunk(WorldCoordinateToChunkIndex(pos + new Vector3(0, y * Chunk.chunkSize,0)));
-                biome.GenerateChunk(ch);
-                ch.CreateMesh();
+                if (zIndex == 0 && xIndex == 0 && !Chunks.ContainsKey(new IntVector3(0, y, 0)))
+                    AddChunk(new IntVector3(0, y, 0));
+                else
+                {
+                    for (int z = -zIndex; z < zIndex + 1; z++)
+                    {
+                        if (!Chunks.ContainsKey(new IntVector3(xIndex, y, z)))
+                            AddChunk(new IntVector3(xIndex, y, z));
+                        if (!Chunks.ContainsKey(new IntVector3(-xIndex, y, z)))
+                            AddChunk(new IntVector3(-xIndex, y, z));
+                    }
+
+                    for (int x = -xIndex + 1; x < xIndex; x++)
+                    {
+                        if (!Chunks.ContainsKey(new IntVector3(x, y, zIndex)))
+                            AddChunk(new IntVector3(x, y, zIndex));
+                        if (!Chunks.ContainsKey(new IntVector3(x, y, -zIndex)))
+                            AddChunk(new IntVector3(x, y, -zIndex));
+                    }
+                }
             }
         }
+    }
 
- 
+    IEnumerator ChunkGeneratorRoutine()
+    {
+        while (true)
+        {
+            yield return null;
+        }
     }
 
     #region Debug
 
+    public int centerX = 0;
     void OnDrawGizmos()
     {
-        Gizmos.color = Color.red;
+        //Gizmos.color = Color.green;
+        //if (posindexX == 0)
+        //    Gizmos.DrawWireCube(new Vector3(0, 0, 0), new Vector3(16, 16, 16));
+        //else
+        //{
+        //    Gizmos.color = Color.green;
+        //    for (int z = -posindexZ; z < posindexZ + 1; z++)
+        //    {
+        //        Gizmos.DrawWireCube(new Vector3((posindexX + centerX) * Chunk.chunkSize, 0, (z + centerX) * Chunk.chunkSize), new Vector3(Chunk.chunkSize, Chunk.chunkSize, Chunk.chunkSize));
+        //        Gizmos.DrawWireCube(new Vector3((-posindexX + centerX) * Chunk.chunkSize, 0, (z + centerX) * Chunk.chunkSize), new Vector3(Chunk.chunkSize, Chunk.chunkSize, Chunk.chunkSize));
+        //    }
 
+        //    Gizmos.color = Color.magenta;
+        //    for (int x = -posindexX + 1; x < posindexX; x++)
+        //    {
+        //        Gizmos.DrawWireCube(new Vector3((x + centerX) * Chunk.chunkSize, 0, (posindexZ + centerX) * Chunk.chunkSize), new Vector3(Chunk.chunkSize, Chunk.chunkSize, Chunk.chunkSize));
+        //        Gizmos.DrawWireCube(new Vector3((x + centerX) * Chunk.chunkSize, 0, (-posindexZ + centerX) * Chunk.chunkSize), new Vector3(Chunk.chunkSize, Chunk.chunkSize, Chunk.chunkSize));
+        //    }
+
+        //}
+
+        Gizmos.color = Color.red;
         if (_worldAnchors == null)
             return;
         foreach (IWorldAnchor anchor in _worldAnchors)
         {
-            Gizmos.DrawWireCube(anchor.AnchorBounds.center, anchor.AnchorBounds.extents * 2);
+            Gizmos.DrawWireCube(anchor.WorldBounds.center, anchor.WorldBounds.extents * 2);
         }
+
+
 
     }
 
@@ -138,28 +173,9 @@ public class World : MonoBehaviour
 
     void GenerateChunks()
     {
-        //for (int x = -ChunksX; x < ChunksX; x++)
-        //{
-        //    for (int y = 0; y < ChunksY; y++)
-        //    {
-        //        for (int z = -ChunksZ; z < ChunksZ; z++)
-        //        {
-        //            AddChunk(x, y, z);
-        //        }
-        //    }
-        //}
-        Bounds playerBounds = _worldAnchors[0].AnchorBounds;
-        for (int x = (int)-(playerBounds.extents.x / Chunk.chunkSize); x < (playerBounds.extents.x / Chunk.chunkSize); x++)
-        {
-            for (int z = (int)-(playerBounds.extents.z / Chunk.chunkSize); z < (playerBounds.extents.z / Chunk.chunkSize); z++)
-            {
-                for (int y = 0; y < ChunksY; y++)
-                {
-                    AddChunk(new IntVector3(x, y, z));
-                }
-            }
-        }
+        UpdateChunkBounds();
 
+        StartCoroutine(_worldGenerator.ChunkGenerator());
         StartCoroutine(UpdateChunks());
     }
 
@@ -174,6 +190,7 @@ public class World : MonoBehaviour
         go.AddComponent<MeshCollider>();
         chunk.world = this;
         Chunks.Add(new IntVector3(x, y, z), chunk);
+        _worldGenerator.QueueTerrain(chunk);
         //Chunks[x, y, z] = chunk;
         go.transform.parent = transform;
         return chunk;
@@ -191,35 +208,42 @@ public class World : MonoBehaviour
         loading = true;
 
 
-        foreach (IChunk chunk in Chunks.Values)
-        {
-            tempList.Add(chunk as IChunk);
-        }
 
-        IEnumerator terrainIT = GenerateTerrainMulti(1);
-        IEnumerator meshIT = GenerateMeshMulti(2);
+        //foreach (IChunk chunk in Chunks.Values)
+        //{
+        //    tempList.Add(chunk as IChunk);
+        //}
 
-        //IEnumerator terrainIT = GenerateTerrainSingle();
-        //IEnumerator meshIT = GenerateMeshSingle();
+        //IEnumerator terrainIT = GenerateTerrainMulti(1);
+        //IEnumerator meshIT = GenerateMeshMulti(2);
+
+        ////IEnumerator terrainIT = GenerateTerrainSingle();
+        ////IEnumerator meshIT = GenerateMeshSingle();
 
 
-        while (terrainIT.MoveNext())
-        {
-            yield return null;
-        }
+        //while (terrainIT.MoveNext())
+        //{
+        //    yield return null;
+        //}
 
-        while (meshIT.MoveNext())
-        {
-            yield return null;
-        }
-
-        loading = false;
-
-        while (loading == true)
-            yield return null;
-
+        //while (meshIT.MoveNext())
+        //{
+        //    yield return null;
+        //}
 
         yield return new WaitForEndOfFrame();
+
+        StartCoroutine(PlacePlayer());
+    }
+
+    private IEnumerator PlacePlayer()
+    {
+        while (!Physics.Raycast(new Vector3(0, (ChunksY * Chunk.chunkSize) + 1, 0), -Vector3.up))
+        {
+            loadLabel = "Left to load: " + _worldGenerator.PreLoadedTerrainCount;
+            yield return null;
+        }
+        loading = false;
 
         RaycastHit hit;
         if (Physics.Raycast(new Vector3(0, (ChunksY * Chunk.chunkSize) + 1, 0), -Vector3.up, out hit))
@@ -228,13 +252,11 @@ public class World : MonoBehaviour
         }
         else
         {
-            player.transform.position = new Vector3(50, 250, 50);
+            player.transform.position = new Vector3(10, 350, 10);
             Debug.Log("Could not set pos");
         }
         player.gameObject.SetActive(true);
-
-        loading = false;
-
+        _lastPosition = player.transform.position;
     }
 
     IEnumerator GenerateTerrainMulti(int threads)
@@ -246,7 +268,7 @@ public class World : MonoBehaviour
                 IChunk ch = NextChunk(tempList);
                 while (ch != null)
                 {
-                    biome.GenerateChunk(ch);
+                    biome.GenerateChunk(ch, maxHeight);
                     loaded++;
                     ch = NextChunk(tempList);
                     Thread.Sleep(0);
@@ -270,7 +292,7 @@ public class World : MonoBehaviour
         // Create Terrain
         foreach (IChunk chunk in Chunks.Values)
         {
-            biome.GenerateChunk(chunk);
+            biome.GenerateChunk(chunk, maxHeight);
             loaded++;
             loadLabel = "Generating Terrain: " + loaded + " / " + Chunks.Count;
             yield return null;
@@ -432,6 +454,16 @@ public class World : MonoBehaviour
             return chunk;
         }
         return null;
+    }
+
+    /// <summary>
+    /// Gets the chunk at the specified index
+    /// </summary>
+    /// <param name="index"></param>
+    /// <returns></returns>
+    public IChunk GetChunk(IntVector3 index)
+    {
+        return GetChunk(index.x, index.y, index.z);
     }
 
     /// <summary>

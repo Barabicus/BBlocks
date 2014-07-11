@@ -24,10 +24,12 @@ public class Chunk : MonoBehaviour, IChunk
     private MeshCollider col;
     private List<ITick> _tickableBlock;
 
-    private IBlock[, ,] blocks;
+    public IBlock[, ,] blocks;
 
     private IntVector3 _chunkPosition;
     private IntVector3 _chunkIndex;
+    bool isMeshCreating = false;
+
     /// <summary>
     /// Cached position of this chunk's position. This can also be used as a key to retrieve the chunk
     /// in the world chunk list.
@@ -57,11 +59,61 @@ public class Chunk : MonoBehaviour, IChunk
 
     public World World
     {
-        get { return world;}
+        get { return world; }
     }
 
+    private bool _loaded;
+    public bool IsLoaded { get { return _loaded; } set { _loaded = value; } }
 
-
+    public bool NeighbouringChunksLoaded
+    {
+        get
+        {
+            return false;
+        }
+    }
+    public IChunk TopChunk
+    {
+        get
+        {
+            return world.GetChunk(ChunkIndex + new IntVector3(0, 1, 0));
+        }
+    }
+    public IChunk BottomChunk
+    {
+        get
+        {
+            return world.GetChunk(ChunkIndex + new IntVector3(0, -1, 0));
+        }
+    }
+    public IChunk ForwardChunk
+    {
+        get
+        {
+            return world.GetChunk(ChunkIndex + new IntVector3(0, 0, 1));
+        }
+    }
+    public IChunk BehindChunk
+    {
+        get
+        {
+            return world.GetChunk(ChunkIndex + new IntVector3(0, 0, -1));
+        }
+    }
+    public IChunk LeftChunk
+    {
+        get
+        {
+            return world.GetChunk(ChunkIndex + new IntVector3(-1, 0, 0));
+        }
+    }
+    public IChunk RightChunk
+    {
+        get
+        {
+            return world.GetChunk(ChunkIndex + new IntVector3(1, 0, 0));
+        }
+    }
     public void Awake()
     {
         _tickableBlock = new List<ITick>();
@@ -267,11 +319,11 @@ public class Chunk : MonoBehaviour, IChunk
 
     private void UpdateMesh()
     {
-      //  CreateMesh();
+        //  CreateMesh();
         mesh.Clear();
         mesh.vertices = meshVertices.ToArray();
         mesh.uv = uvMap.ToArray();
-    //    mesh.uv2 = uvMap2.ToArray();
+        //    mesh.uv2 = uvMap2.ToArray();
         mesh.triangles = meshTriangles.ToArray();
         mesh.Optimize();
         mesh.RecalculateNormals();
@@ -349,16 +401,17 @@ public class Chunk : MonoBehaviour, IChunk
                 }
             }
         }
+        isMeshCreating = false;
         IsMeshDirty = true;
     }
 
-    bool isMeshCreating = false;
     public void CreateMesh()
     {
         if (!isMeshCreating)
         {
             isMeshCreating = true;
-            StartCoroutine(CreateMeshCoroutine());
+            world.WorldGenerator.QueueMesh(this);
+            // StartCoroutine(CreateMeshCoroutine());
         }
     }
 

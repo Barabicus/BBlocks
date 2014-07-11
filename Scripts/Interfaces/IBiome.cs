@@ -4,7 +4,7 @@ using System.Collections;
 public interface IBiome
 {
 
-    Block GetBlock(int x, int y, int z);
+    Block GetBlockFromPosition(IntVector3 blockPosition, int maxHeight);
 
-    float GetPerlin(IntVector3 chunkPosition, int maxHeight);
+    float GetValue(IntVector3 blockPosition, int maxHeight);
 }

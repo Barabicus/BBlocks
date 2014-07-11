@@ -25,7 +25,7 @@ public class BiomeController : MonoBehaviour
         }
     }
 
-    public void GenerateChunk(IChunk chunk)
+    public void GenerateChunk(IChunk chunk, int maxHeight)
     {
         IBiome bg = _biomes[0];
 
@@ -35,12 +35,16 @@ public class BiomeController : MonoBehaviour
             {
                 for (int z = 0; z < chunk.Blocks.GetLength(2); z++)
                 {
-                    chunk[x, y, z] = bg.GetBlock(x, y, z);
+                    if (bg.GetValue(chunk.LocalPositionToWorldPosition(x, y, z), maxHeight) == 1)
+                        chunk[x, y, z] = bg.GetBlockFromPosition(chunk.ChunkPosition + new IntVector3(x, y, z), maxHeight);
+                    else
+                        chunk[x, y, z] = null;
                 }
             }
         }
 
-          //  bg.GenerateBiome(chunk);
+        //Chunk is finished loading
+        chunk.IsLoaded = true;
     }
 
     float BiomeNoise(int x, int z)

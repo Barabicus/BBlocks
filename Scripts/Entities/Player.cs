@@ -152,7 +152,7 @@ public class Player : Entity, IWorldAnchor
         GUI.DrawTexture(new Rect((Screen.width / 2) - cursorWidth / 2, (Screen.height / 2) - cursorWidth / 2, cursorWidth, cursorWidth), cursor);
     }
 
-    public Bounds AnchorBounds
+    public Bounds WorldBounds
     {
         get { return new Bounds(transform.position, new Vector3(Chunk.chunkSize * 10, Chunk.chunkSize * 8, Chunk.chunkSize * 10)); }
     }

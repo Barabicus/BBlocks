@@ -4,6 +4,8 @@ using System.Collections.Generic;
 
 public abstract class Block : IBlock
 {
+    protected byte blockData = 0;
+
     public abstract byte BlockID { get; }
 
     /// <summary>
@@ -46,46 +48,47 @@ public abstract class Block : IBlock
 
     public void ConstructBlock(int x, int y, int z, Chunk chunk)
     {
-            if (chunk.GetBlockRelativePosition(x, y + 1, z) == null)
-            {
-                //Block above is air
-                CreateTopFace(x, y, z, chunk);
-            }
+        if (!(chunk.TopChunk == null && z == Chunk.chunkSize - 1) && chunk.GetBlockRelativePosition(x, y + 1, z) == null)
+        {
+            //Block above is air
+            CreateTopFace(x, y, z, chunk);
+        }
 
-            if (chunk.GetBlockRelativePosition(x, y - 1, z) == null)
-            {
-                //Block below is air
-                CreateBottomFace(x, y, z, chunk);
+        if (!(chunk.BottomChunk == null && z == Chunk.chunkSize - 1) && chunk.GetBlockRelativePosition(x, y - 1, z) == null)
+        {
+            //Block below is air
+            CreateBottomFace(x, y, z, chunk);
 
-            }
+        }
 
-            if (chunk.GetBlockRelativePosition(x + 1, y, z) == null)
-            {
-                //Block east is air
-                CreateEastFace(x, y, z, chunk);
+        if (!(chunk.RightChunk == null && z == Chunk.chunkSize - 1) && chunk.GetBlockRelativePosition(x + 1, y, z) == null)
+        {
+            //Block east is air
+            CreateRightFace(x, y, z, chunk);
 
-            }
+        }
 
-            if (chunk.GetBlockRelativePosition(x - 1, y, z) == null)
-            {
-                //Block west is air
-                CreateWestFace(x, y, z, chunk);
+        if (!(chunk.LeftChunk == null && z == Chunk.chunkSize - 1) && chunk.GetBlockRelativePosition(x - 1, y, z) == null)
+        {
+            //Block west is air
+            CreateLeftFace(x, y, z, chunk);
 
-            }
+        }
 
-            if (chunk.GetBlockRelativePosition(x, y, z + 1) == null)
-            {
-                //Block north is air
-                CreateNorthFace(x, y, z, chunk);
+        if (!(chunk.ForwardChunk == null && z == Chunk.chunkSize - 1) && chunk.GetBlockRelativePosition(x, y, z + 1) == null)
+        {
+            //Block north is air
+            CreateForwardFace(x, y, z, chunk);
 
-            }
+        }
 
-            if (chunk.GetBlockRelativePosition(x, y, z - 1) == null)
-            {
-                //Block south is air
-                CreateSouthFace(x, y, z, chunk);
 
-            }
+        if (!(chunk.BehindChunk == null && z == Chunk.chunkSize - 1) && chunk.GetBlockRelativePosition(x, y, z - 1) == null)
+        {
+            //Block south is air
+            CreateBehindFace(x, y, z, chunk);
+
+        }
     }
     protected void CreateTopFace(int x, int y, int z, Chunk chunk)
     {
@@ -120,7 +123,7 @@ public abstract class Block : IBlock
         AddUV(BottomUV, chunk);
 
     }
-    protected void CreateNorthFace(int x, int y, int z, Chunk chunk)
+    protected void CreateForwardFace(int x, int y, int z, Chunk chunk)
     {
         chunk.meshVertices.Add(new Vector3(x + 1, y - 1, z + 1));
         chunk.meshVertices.Add(new Vector3(x + 1, y, z + 1));
@@ -137,7 +140,7 @@ public abstract class Block : IBlock
         AddUV(NorthUV, chunk);
 
     }
-    protected void CreateSouthFace(int x, int y, int z, Chunk chunk)
+    protected void CreateBehindFace(int x, int y, int z, Chunk chunk)
     {
         chunk.meshVertices.Add(new Vector3(x, y - 1, z));
         chunk.meshVertices.Add(new Vector3(x, y, z));
@@ -154,7 +157,7 @@ public abstract class Block : IBlock
         AddUV(SouthUV, chunk);
 
     }
-    protected void CreateWestFace(int x, int y, int z, Chunk chunk)
+    protected void CreateLeftFace(int x, int y, int z, Chunk chunk)
     {
         chunk.meshVertices.Add(new Vector3(x, y - 1, z + 1));
         chunk.meshVertices.Add(new Vector3(x, y, z + 1));
@@ -171,7 +174,7 @@ public abstract class Block : IBlock
         AddUV(WestUV, chunk);
 
     }
-    protected void CreateEastFace(int x, int y, int z, Chunk chunk)
+    protected void CreateRightFace(int x, int y, int z, Chunk chunk)
     {
         chunk.meshVertices.Add(new Vector3(x + 1, y - 1, z));
         chunk.meshVertices.Add(new Vector3(x + 1, y, z));

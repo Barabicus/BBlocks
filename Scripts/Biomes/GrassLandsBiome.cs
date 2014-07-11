@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 
-public class GrassLandsBiome : MonoBehaviour, IBiome
+public class GrassLandsBiome : MonoBehaviour
 {
     //  public AnimationCurve heightCurve = AnimationCurve.Linear(0, 1, 1, 1);
     public AnimationCurve perlinCurve = AnimationCurve.Linear(0, 1, 1, 1);
@@ -79,7 +79,7 @@ public class GrassLandsBiome : MonoBehaviour, IBiome
     }
 
 
-    public Block GetBlock(int x, int y, int z)
+    public Block GetBlock(IntVector3 blockPosition, int maxHeight)
     {
         throw new System.NotImplementedException();
     }

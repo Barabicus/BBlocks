@@ -11,6 +11,17 @@ public interface IChunk
     IntVector3 ChunkPosition { get; }
     IntVector3 ChunkIndex { get; }
 
+    bool IsLoaded { get; set; }
+
+    bool NeighbouringChunksLoaded { get; }
+
+    IChunk TopChunk { get; }
+    IChunk BottomChunk { get; }
+    IChunk ForwardChunk { get; }
+    IChunk BehindChunk { get; }
+    IChunk LeftChunk { get; }
+    IChunk RightChunk { get; }
+
     IBlock this[int x, int y, int z] { get; set; }
 
     IBlock[,,] Blocks { get; }
