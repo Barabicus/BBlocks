@@ -6,11 +6,10 @@ using System.Threading;
 public class WorldGenerator
 {
     private Queue<IChunk> _preLoadedTerrainChunks;
-    private Queue<IChunk> _preLoadedMeshChunks;
+    private Dictionary<IntVector3, IChunk> _preLoadedMeshChunks;
     private IChunk[] _preLoadedTerrainBuffer;
     private IChunk[] _preLoadedMeshBuffer;
-    private BiomeController biome;
-    private int maxHeight;
+    private World _world;
     private int chunkThreads;
 
     public int PreLoadedTerrainCount
@@ -23,30 +22,30 @@ public class WorldGenerator
         get { return _preLoadedMeshChunks.Count; }
     }
 
-    public WorldGenerator(BiomeController biome, int maxHeight, int chunkThreads)
-    {
-        this.biome = biome;
-        this.maxHeight = maxHeight;
-        this.chunkThreads = chunkThreads;
+    public bool Running { get; set; }
 
+    public WorldGenerator(World world, int chunkThreads)
+    {
+        Running = true;
+        this.chunkThreads = chunkThreads;
+        this._world = world;
         _preLoadedTerrainChunks = new Queue<IChunk>();
-        _preLoadedMeshChunks = new Queue<IChunk>();
+        _preLoadedMeshChunks = new Dictionary<IntVector3, IChunk>();
         _preLoadedTerrainBuffer = new IChunk[chunkThreads];
         _preLoadedMeshBuffer = new IChunk[chunkThreads];
 
     }
 
-    public void QueueTerrain(IChunk chunk)
+    public void GenerateChunk(IChunk chunk)
     {
-        _preLoadedTerrainChunks.Enqueue(chunk);
+        // If the terrain has not been created for the chunk, queue it to be loaded
+        if (!chunk.IsLoaded)
+            _preLoadedTerrainChunks.Enqueue(chunk);
+        if (!_preLoadedMeshChunks.ContainsKey(chunk.ChunkIndex))
+            _preLoadedMeshChunks.Add(chunk.ChunkIndex, chunk);
     }
 
-    public void QueueMesh(IChunk chunk)
-    {
-        _preLoadedMeshChunks.Enqueue(chunk);
-    }
-
-    public IEnumerator ChunkGenerator()
+    public IEnumerator ChunkLoader()
     {
         for (int i = 0; i < chunkThreads; i++)
         {
@@ -65,12 +64,13 @@ public class WorldGenerator
                     if (_preLoadedTerrainChunks.Count > 0)
                         _preLoadedTerrainBuffer[i] = _preLoadedTerrainChunks.Dequeue();
                 }
-                if (_preLoadedMeshBuffer[i] == null)
+                if (_preLoadedMeshBuffer[i] == null && _preLoadedTerrainChunks.Count == 0)
                 {
-                    if (_preLoadedMeshChunks.Count > 0)
+                    foreach (IChunk chunk in _preLoadedMeshChunks.Values)
                     {
-                        IChunk chunk = _preLoadedMeshChunks.Peek();
-                        _preLoadedMeshBuffer[i] = _preLoadedMeshChunks.Dequeue();
+                        _preLoadedMeshBuffer[i] = chunk;
+                        _preLoadedMeshChunks.Remove(chunk.ChunkIndex);
+                        break;
                     }
                 }
             }
@@ -78,40 +78,41 @@ public class WorldGenerator
         }
     }
 
-    private readonly static object enqueueLock = new object();
+    private bool ValidateChunk(IChunk chunk)
+    {
+        if (chunk.TopChunk == null || chunk.BottomChunk == null || chunk.ForwardChunk == null || chunk.BehindChunk == null || chunk.LeftChunk == null || chunk.RightChunk == null)
+            return true;
+        return chunk.TopChunk.IsLoaded && chunk.BottomChunk.IsLoaded && chunk.LeftChunk.IsLoaded && chunk.RightChunk.IsLoaded && chunk.ForwardChunk.IsLoaded && chunk.BehindChunk.IsLoaded;
+    }
+
+    /// <summary>
+    /// Create chunk terrain and meshes. Each threads loads a specific or mesh based on an index value of that thread.
+    /// Objects are moved into arrays from the ChunkLoader method.
+    /// </summary>
+    /// <param name="obj"></param>
     private void WorkerThread(object obj)
     {
         int index = (int)obj;
-        while (true)
+        while (Running)
         {
-
-            if (_preLoadedTerrainChunks.Count > 0)
-            {
-                // Load Terrains
-                if (_preLoadedTerrainBuffer[index] != null)
-                {
-                    IChunk chunk = _preLoadedTerrainBuffer[index];
-                    biome.GenerateChunk(chunk, maxHeight);
-                    _preLoadedTerrainBuffer[index] = null;
-                    lock (enqueueLock)
-                    {
-                        _preLoadedMeshChunks.Enqueue(chunk);
-                    }
-                }
-            }
-            else
-            {
-
-                // Load Meshes
-                if (_preLoadedMeshBuffer[index] != null)
-                {
-                    IChunk chunk = _preLoadedMeshBuffer[index];
-                    chunk.ForceCreateMesh();
-                    _preLoadedMeshBuffer[index] = null;
-                }
-            }
-
             Thread.Sleep(25);
+
+            // Load Terrains
+            if (_preLoadedTerrainBuffer[index] != null)
+            {
+                IChunk chunk = _preLoadedTerrainBuffer[index];
+                _world.biome.GenerateChunk(chunk, _world.maxHeight);
+                _preLoadedTerrainBuffer[index] = null;
+            }
+
+            // Load Meshes
+            if (_preLoadedMeshBuffer[index] != null)
+            {
+                IChunk chunk = _preLoadedMeshBuffer[index];
+                chunk.ForceCreateMesh();
+                _preLoadedMeshBuffer[index] = null;
+            }
+
         }
     }
 

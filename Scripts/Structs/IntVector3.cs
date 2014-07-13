@@ -73,6 +73,21 @@ public struct IntVector3
         return new IntVector3(v1.x / i2, v1.y / i2, v1.z / i2);
     }
 
+    public static bool operator ==(IntVector3 i1, IntVector3 i2)
+    {
+        if (object.ReferenceEquals(i1, null))
+        {
+            return object.ReferenceEquals(i2, null);
+        }
+
+        return i1.Equals(i2);
+    }
+
+    public static bool operator !=(IntVector3 i1, IntVector3 i2)
+    {
+        return !Equals(i1, i2);
+    }
+
     public void Abs()
     {
         x = x < 0 ? x * -1 : x;

@@ -48,27 +48,27 @@ public abstract class Block : IBlock
 
     public void ConstructBlock(int x, int y, int z, Chunk chunk)
     {
-        if (!(chunk.TopChunk == null && z == Chunk.chunkSize - 1) && chunk.GetBlockRelativePosition(x, y + 1, z) == null)
+        if (!(chunk.TopChunk == null && y == Chunk.chunkSize - 1) && chunk.GetBlockRelativePosition(x, y + 1, z) == null)
         {
             //Block above is air
             CreateTopFace(x, y, z, chunk);
         }
 
-        if (!(chunk.BottomChunk == null && z == Chunk.chunkSize - 1) && chunk.GetBlockRelativePosition(x, y - 1, z) == null)
+        if (!(chunk.BottomChunk == null && y == 0) && chunk.GetBlockRelativePosition(x, y - 1, z) == null)
         {
             //Block below is air
             CreateBottomFace(x, y, z, chunk);
 
         }
 
-        if (!(chunk.RightChunk == null && z == Chunk.chunkSize - 1) && chunk.GetBlockRelativePosition(x + 1, y, z) == null)
+        if (!(chunk.RightChunk == null && x == Chunk.chunkSize - 1) && chunk.GetBlockRelativePosition(x + 1, y, z) == null)
         {
             //Block east is air
             CreateRightFace(x, y, z, chunk);
 
         }
 
-        if (!(chunk.LeftChunk == null && z == Chunk.chunkSize - 1) && chunk.GetBlockRelativePosition(x - 1, y, z) == null)
+        if (!(chunk.LeftChunk == null && x == 0) && chunk.GetBlockRelativePosition(x - 1, y, z) == null)
         {
             //Block west is air
             CreateLeftFace(x, y, z, chunk);
@@ -82,8 +82,7 @@ public abstract class Block : IBlock
 
         }
 
-
-        if (!(chunk.BehindChunk == null && z == Chunk.chunkSize - 1) && chunk.GetBlockRelativePosition(x, y, z - 1) == null)
+        if (!(chunk.BehindChunk == null && z == 0) && chunk.GetBlockRelativePosition(x, y, z - 1) == null)
         {
             //Block south is air
             CreateBehindFace(x, y, z, chunk);

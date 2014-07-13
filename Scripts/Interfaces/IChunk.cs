@@ -13,8 +13,6 @@ public interface IChunk
 
     bool IsLoaded { get; set; }
 
-    bool NeighbouringChunksLoaded { get; }
-
     IChunk TopChunk { get; }
     IChunk BottomChunk { get; }
     IChunk ForwardChunk { get; }
@@ -74,5 +72,8 @@ public interface IChunk
     void CreateMesh();
 
     void Tick();
+
+    void UpdateNeighbouringChunks();
+
 
 }

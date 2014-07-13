@@ -45,6 +45,7 @@ public class BiomeController : MonoBehaviour
 
         //Chunk is finished loading
         chunk.IsLoaded = true;
+        chunk.UpdateNeighbouringChunks();
     }
 
     float BiomeNoise(int x, int z)

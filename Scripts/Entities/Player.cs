@@ -69,9 +69,13 @@ public class Player : Entity, IWorldAnchor
 
         //  vel = Vector3.zero;
         //  vel += (new Vector3(transform.forward.x, 0, transform.forward.z))* Input.GetAxis("Vertical") * movePower;
-        vel.x = transform.forward.x * Input.GetAxis("Vertical") * movePower;
-        vel.z = transform.forward.z * Input.GetAxis("Vertical") * movePower;
-        vel += transform.right * Input.GetAxis("Horizontal") * movePower;
+      //  vel.x = transform.forward.x * Input.GetAxis("Vertical") * movePower;
+      //  vel.z = transform.forward.z * Input.GetAxis("Vertical") * movePower;
+        vel += Quaternion.Euler(0, transform.localEulerAngles.y, transform.localEulerAngles.z) * Vector3.forward * Input.GetAxis("Vertical") * movePower;
+        vel += Quaternion.Euler(0, transform.localEulerAngles.y, transform.localEulerAngles.z) * Vector3.right * Input.GetAxis("Horizontal") * movePower;
+
+
+    //   vel += transform.right * Input.GetAxis("Horizontal") * movePower;
 
         if (controller.isGrounded)
         {
@@ -134,8 +138,7 @@ public class Player : Entity, IWorldAnchor
                 world.SetBlockWorldCoordinate(position + new IntVector3(0, -1, 0), null);
                 world.SetBlockWorldCoordinate(position + new IntVector3(1, 0, 0), null);
                 world.SetBlockWorldCoordinate(position + new IntVector3(-1, 0, 0), null);
-                //     world.SetBlockWorldCoordinate(position + new IntVector3(0, 0, 1), null);
-                //      world.SetBlockWorldCoordinate(position + new IntVector3(0, 0, -1), null);
+               
 
                 world.SetBlockWorldCoordinate(position + new IntVector3(1, 1, 0), null);
                 world.SetBlockWorldCoordinate(position + new IntVector3(-1, 1, 0), null);
@@ -154,6 +157,6 @@ public class Player : Entity, IWorldAnchor
 
     public Bounds WorldBounds
     {
-        get { return new Bounds(transform.position, new Vector3(Chunk.chunkSize * 10, Chunk.chunkSize * 8, Chunk.chunkSize * 10)); }
+        get { return new Bounds(transform.position, new Vector3(Chunk.chunkSize * 6, Chunk.chunkSize * 8, Chunk.chunkSize * 6)); }
     }
 }

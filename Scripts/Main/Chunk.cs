@@ -63,15 +63,11 @@ public class Chunk : MonoBehaviour, IChunk
     }
 
     private bool _loaded;
-    public bool IsLoaded { get { return _loaded; } set { _loaded = value; } }
-
-    public bool NeighbouringChunksLoaded
+    public bool IsLoaded { get { return _loaded; } set 
     {
-        get
-        {
-            return false;
-        }
+        _loaded = value; }
     }
+
     public IChunk TopChunk
     {
         get
@@ -248,7 +244,7 @@ public class Chunk : MonoBehaviour, IChunk
     /// <returns></returns>
     public bool SetBlock(int x, int y, int z, IBlock value)
     {
-        if (blocks == null)
+        if (blocks == null && !IsMeshDirty && !isMeshCreating)
         {
             return false;
         }
@@ -348,45 +344,55 @@ public class Chunk : MonoBehaviour, IChunk
 
     }
 
-    /*
     /// <summary>
     /// Updates all neighbouring chunks without any block checking.
     /// </summary>
-    private void UpdateNeighbouringChunks()
+    public void UpdateNeighbouringChunks()
     {
 
-        IChunk chunk = null;
+        if (!(LeftChunk == null))
+            LeftChunk.CreateMesh();
+        if (!(TopChunk == null))
+            TopChunk.CreateMesh();
+        if (!(BottomChunk == null))
+            BottomChunk.CreateMesh();
+        if (!(RightChunk == null))
+            RightChunk.CreateMesh();
+        if (!(ForwardChunk == null))
+            ForwardChunk.CreateMesh();
+        if (!(BehindChunk == null))
+            BehindChunk.CreateMesh();
 
-        chunk = world.GetChunkWorldCoordinate(ChunkPosition.x - chunkSize, ChunkPosition.y, ChunkPosition.z);
-        if (chunk != null)
-            chunk.UpdateMesh();
-        chunk = null;
+        //chunk = world.GetChunkWorldCoordinate(ChunkPosition.x - chunkSize, ChunkPosition.y, ChunkPosition.z);
+        //if (chunk != null)
+        //    chunk.CreateMesh();
+        //chunk = null;
 
-        chunk = world.GetChunkWorldCoordinate(ChunkPosition.x, ChunkPosition.y - chunkSize, ChunkPosition.z);
-        if (chunk != null)
-            chunk.UpdateMesh();
-        chunk = null;
+        //chunk = world.GetChunkWorldCoordinate(ChunkPosition.x, ChunkPosition.y - chunkSize, ChunkPosition.z);
+        //if (chunk != null)
+        //    chunk.CreateMesh();
+        //chunk = null;
 
-        chunk = world.GetChunkWorldCoordinate(ChunkPosition.x, ChunkPosition.y, ChunkPosition.z - chunkSize);
-        if (chunk != null)
-            chunk.UpdateMesh();
-        chunk = null;
+        //chunk = world.GetChunkWorldCoordinate(ChunkPosition.x, ChunkPosition.y, ChunkPosition.z - chunkSize);
+        //if (chunk != null)
+        //    chunk.CreateMesh();
+        //chunk = null;
 
-        chunk = world.GetChunkWorldCoordinate(ChunkPosition.x + chunkSize, ChunkPosition.y, ChunkPosition.z);
-        if (chunk != null)
-            chunk.UpdateMesh();
-        chunk = null;
+        //chunk = world.GetChunkWorldCoordinate(ChunkPosition.x + chunkSize, ChunkPosition.y, ChunkPosition.z);
+        //if (chunk != null)
+        //    chunk.CreateMesh();
+        //chunk = null;
 
-        chunk = world.GetChunkWorldCoordinate(ChunkPosition.x, ChunkPosition.y + chunkSize, ChunkPosition.z);
-        if (chunk != null)
-            chunk.UpdateMesh();
-        chunk = null;
+        //chunk = world.GetChunkWorldCoordinate(ChunkPosition.x, ChunkPosition.y + chunkSize, ChunkPosition.z);
+        //if (chunk != null)
+        //    chunk.CreateMesh();
+        //chunk = null;
 
-        chunk = world.GetChunkWorldCoordinate(ChunkPosition.x, ChunkPosition.y, ChunkPosition.z + chunkSize);
-        if (chunk != null)
-            chunk.UpdateMesh();
+        //chunk = world.GetChunkWorldCoordinate(ChunkPosition.x, ChunkPosition.y, ChunkPosition.z + chunkSize);
+        //if (chunk != null)
+        //    chunk.CreateMesh();
 
-    }*/
+    }
 
     public void ForceCreateMesh()
     {
@@ -407,10 +413,10 @@ public class Chunk : MonoBehaviour, IChunk
 
     public void CreateMesh()
     {
-        if (!isMeshCreating)
+        if (!isMeshCreating && !IsMeshDirty)
         {
             isMeshCreating = true;
-            world.WorldGenerator.QueueMesh(this);
+            world.WorldGenerator.GenerateChunk(this);
             // StartCoroutine(CreateMeshCoroutine());
         }
     }

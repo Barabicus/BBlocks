@@ -10,25 +10,11 @@ public class DebugBiome : MonoBehaviour, IBiome
 
     public float GetValue(IntVector3 blockPosition, int maxHeight)
     {
-        float lands = Mathf.PerlinNoise((blockPosition.x) / (float)maxHeight * octaves, (blockPosition.z) / (float)maxHeight * octaves);
-        lands += (maxHeight - blockPosition.y) / (float)maxHeight;
-        lands *= perlinCurve.Evaluate((blockPosition.y / (float)maxHeight));
-        lands = Mathf.Round(lands);
-        lands = Mathf.Clamp(lands, 0f, 1f);
-        if (blockPosition.y < 4)
-            return 1;
-        else
-            return lands;
+        return 1;
     }
 
     public Block GetBlockFromPosition(IntVector3 blockPosition, int maxHeight)
     {
-        if (blockPosition.y < 2)
-            return new StoneBlock();
-        else
-            if (GetValue(blockPosition + new IntVector3(0, 1, 0), maxHeight) == 0)
-                return new GrassBlock();
-            else
-                return new DirtBlock();
+        return new StoneBlock();
     }
 }
