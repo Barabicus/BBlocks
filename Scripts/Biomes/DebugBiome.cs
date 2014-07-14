@@ -10,7 +10,10 @@ public class DebugBiome : MonoBehaviour, IBiome
 
     public float GetValue(IntVector3 blockPosition, int maxHeight)
     {
-        return 1;
+        if (blockPosition.y < 100)
+            return 1;
+        else
+            return 0;
     }
 
     public Block GetBlockFromPosition(IntVector3 blockPosition, int maxHeight)

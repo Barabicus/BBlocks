@@ -5,12 +5,28 @@ using System.Threading;
 
 public class WorldGenerator
 {
+    /// <summary>
+    /// Queue of all the terrains that are to be loaded. Terrain loading populates the blocks
+    /// and does not handle the actual rendering
+    /// </summary>
     private Queue<IChunk> _preLoadedTerrainChunks;
+    /// <summary>
+    /// Dictionary of all chunk meshes that are to be created. For a mesh to be created the surrounding 
+    /// chunks must first be loaded via the biome controller. Subsequent updates to chunks will also be added
+    /// this this Dictionary.
+    /// </summary>
     private Dictionary<IntVector3, IChunk> _preLoadedMeshChunks;
+    /// <summary>
+    /// To avoid multiple threads attempting to simultaneously create the same chunk mesh, chunks currently being
+    /// operated on are added / removed here synchronously.
+    /// </summary>
+    private Dictionary<IntVector3, IChunk> _loadingMeshChunks;
     private IChunk[] _preLoadedTerrainBuffer;
     private IChunk[] _preLoadedMeshBuffer;
     private World _world;
     private int chunkThreads;
+
+    private static readonly object meshChunkLock = new object();
 
     public int PreLoadedTerrainCount
     {
@@ -31,6 +47,7 @@ public class WorldGenerator
         this._world = world;
         _preLoadedTerrainChunks = new Queue<IChunk>();
         _preLoadedMeshChunks = new Dictionary<IntVector3, IChunk>();
+        _loadingMeshChunks = new Dictionary<IntVector3, IChunk>();
         _preLoadedTerrainBuffer = new IChunk[chunkThreads];
         _preLoadedMeshBuffer = new IChunk[chunkThreads];
 
@@ -41,8 +58,32 @@ public class WorldGenerator
         // If the terrain has not been created for the chunk, queue it to be loaded
         if (!chunk.IsLoaded)
             _preLoadedTerrainChunks.Enqueue(chunk);
+        lock (meshChunkLock) { 
         if (!_preLoadedMeshChunks.ContainsKey(chunk.ChunkIndex))
             _preLoadedMeshChunks.Add(chunk.ChunkIndex, chunk);
+            }
+    }
+
+    readonly static object loadLock = new object();
+    bool AddLoadingMeshChunk(IChunk chunk)
+    {
+        lock (loadLock)
+        {
+            if (!_loadingMeshChunks.ContainsKey(chunk.ChunkIndex))
+            {
+                _loadingMeshChunks.Add(chunk.ChunkIndex, chunk);
+                return true;
+            }
+            return false;
+        }
+    }
+
+    void RemoveLoadingMeshChunk(IChunk chunk)
+    {
+        lock (loadLock)
+        {
+            _loadingMeshChunks.Remove(chunk.ChunkIndex);
+        }
     }
 
     public IEnumerator ChunkLoader()
@@ -57,20 +98,28 @@ public class WorldGenerator
             // For every update move chunks into any index slot that is 
             // free. The threads associated with the indices will then take 
             // this chunk, work on it and free up their slot again.
-            for (int i = 0; i < _preLoadedTerrainBuffer.Length; i++)
+            for (int i = 0; i < chunkThreads; i++)
             {
+                // Terrain loading is simply executed on a first come first serve basis.
+                // Meshes will not be created until all surrounding chunks have first created their terrain.
                 if (_preLoadedTerrainBuffer[i] == null)
                 {
                     if (_preLoadedTerrainChunks.Count > 0)
                         _preLoadedTerrainBuffer[i] = _preLoadedTerrainChunks.Dequeue();
                 }
+                // Mesh loading attempts to ensure no two meshes are being worked on at the same time.
                 if (_preLoadedMeshBuffer[i] == null && _preLoadedTerrainChunks.Count == 0)
                 {
-                    foreach (IChunk chunk in _preLoadedMeshChunks.Values)
+                    lock (meshChunkLock)
                     {
-                        _preLoadedMeshBuffer[i] = chunk;
-                        _preLoadedMeshChunks.Remove(chunk.ChunkIndex);
-                        break;
+                        foreach (IChunk chunk in _preLoadedMeshChunks.Values)
+                        {
+                            if (!AddLoadingMeshChunk(chunk))
+                                continue;
+                            _preLoadedMeshBuffer[i] = chunk;
+                            _preLoadedMeshChunks.Remove(chunk.ChunkIndex);
+                            break;
+                        }
                     }
                 }
             }
@@ -111,6 +160,7 @@ public class WorldGenerator
                 IChunk chunk = _preLoadedMeshBuffer[index];
                 chunk.ForceCreateMesh();
                 _preLoadedMeshBuffer[index] = null;
+                RemoveLoadingMeshChunk(chunk);
             }
 
         }

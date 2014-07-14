@@ -244,7 +244,7 @@ public class Chunk : MonoBehaviour, IChunk
     /// <returns></returns>
     public bool SetBlock(int x, int y, int z, IBlock value)
     {
-        if (blocks == null && !IsMeshDirty && !isMeshCreating)
+        if (blocks == null && IsMeshDirty && isMeshCreating)
         {
             return false;
         }
@@ -350,17 +350,17 @@ public class Chunk : MonoBehaviour, IChunk
     public void UpdateNeighbouringChunks()
     {
 
-        if (!(LeftChunk == null))
+        if (!(LeftChunk == null) && LeftChunk.IsLoaded)
             LeftChunk.CreateMesh();
-        if (!(TopChunk == null))
+        if (!(TopChunk == null) && TopChunk.IsLoaded)
             TopChunk.CreateMesh();
-        if (!(BottomChunk == null))
+        if (!(BottomChunk == null) && BottomChunk.IsLoaded)
             BottomChunk.CreateMesh();
-        if (!(RightChunk == null))
+        if (!(RightChunk == null) && RightChunk.IsLoaded)
             RightChunk.CreateMesh();
-        if (!(ForwardChunk == null))
+        if (!(ForwardChunk == null) && ForwardChunk.IsLoaded)
             ForwardChunk.CreateMesh();
-        if (!(BehindChunk == null))
+        if (!(BehindChunk == null) && BehindChunk.IsLoaded)
             BehindChunk.CreateMesh();
 
         //chunk = world.GetChunkWorldCoordinate(ChunkPosition.x - chunkSize, ChunkPosition.y, ChunkPosition.z);

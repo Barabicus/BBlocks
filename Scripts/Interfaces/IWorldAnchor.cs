@@ -3,7 +3,7 @@ using System.Collections;
 
 public interface IWorldAnchor
 {
-
-    Bounds WorldBounds { get; }
+    IntVector3 AnchorPosition { get; }
+    IntVector3 AnchorBounds { get; }
 
 }

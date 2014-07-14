@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System;
+using System.Linq;
 
 /// <summary>
 /// The game world
@@ -31,7 +32,7 @@ public class World : MonoBehaviour
 
     //IChunk[, ,] _chunks = null;
 
-    bool loading;
+    bool loading = true;
 
     public int ChunkCount
     {
@@ -62,7 +63,7 @@ public class World : MonoBehaviour
     {
         maxHeight = ChunksY * Chunk.chunkSize;
         _lastTime = Time.time;
-        _worldAnchors.Add(player.Find("Camera").GetComponent<Player>());
+        _worldAnchors.Add(player.GetComponent<Player>());
         _worldGenerator = new WorldGenerator(this, ChunkThreads);
         GenerateChunks();
     }
@@ -72,8 +73,9 @@ public class World : MonoBehaviour
     {
         if (loading)
         {
-            GUILayout.BeginArea(new Rect(Screen.width / 2, Screen.height / 2, 250, 250));
-            GUILayout.Label(loadLabel);
+            GUILayout.BeginArea(new Rect((Screen.width / 2) - 100, Screen.height / 2, 250, 250));
+            GUILayout.Box(loadLabel);
+
             GUILayout.EndArea();
         }
     }
@@ -89,9 +91,11 @@ public class World : MonoBehaviour
 
     void Update()
     {
+        if (loading)
+            player.transform.position = new Vector3(0, 250, 0);
 
         IntVector3 currentPositionIndex = WorldCoordinateToChunkIndex(player.transform.position);
-        if(_lastPositionIndex != currentPositionIndex)
+        if ( Mathf.Abs(_lastPositionIndex.x - currentPositionIndex.x) >= 5 || Mathf.Abs(_lastPositionIndex.z - currentPositionIndex.z) >= 5)
             UpdateChunkBounds();
 
         if (Time.time - _lastTime > TickFrequency)
@@ -106,76 +110,130 @@ public class World : MonoBehaviour
 
     void UpdateChunkBounds()
     {
-        Bounds playerBounds = _worldAnchors[0].WorldBounds;
+        IntVector3 playerBounds = _worldAnchors[0].AnchorBounds;
+        IntVector3 playerPosition = _worldAnchors[0].AnchorPosition / Chunk.chunkSize;
         _lastPositionIndex = WorldCoordinateToChunkIndex(player.transform.position);
 
-        //for (int y = 0; y < ChunksY; y++)
-        //{
-        //    IntVector3 loc = WorldCoordinateToChunkIndex(new Vector3(playerBounds.center.x, y * Chunk.chunkSize, playerBounds.center.z));
-        //    if (!Chunks.ContainsKey(loc))
-        //        AddChunk(loc);
-        //}
-
-        for (int xIndex = 0, zIndex = 0; xIndex < (int)playerBounds.extents.x / Chunk.chunkSize; xIndex++, zIndex++)
+        for (int x = -playerBounds.x / 2; x < playerBounds.x / 2; x++)
         {
-            for (int y = 0; y < ChunksY; y++)
+            for (int y = 0; y < playerBounds.y; y++)
             {
-                if (zIndex == 0 && xIndex == 0 && !Chunks.ContainsKey(new IntVector3(0, y, 0)))
-                    AddChunk(new IntVector3(0, y, 0));
-                else
+                for (int z = -playerBounds.z / 2; z < playerBounds.z / 2; z++)
                 {
-                    for (int z = -zIndex; z < zIndex + 1; z++)
-                    {
-                        if (!Chunks.ContainsKey(new IntVector3(WorldCoordinateToChunkIndex(playerBounds.center).x + xIndex, y, z)))
-                            AddChunk(new IntVector3(WorldCoordinateToChunkIndex(playerBounds.center).x + xIndex, y, z));
-                        if (!Chunks.ContainsKey(new IntVector3(WorldCoordinateToChunkIndex(playerBounds.center).x + -xIndex, y, z)))
-                            AddChunk(new IntVector3(WorldCoordinateToChunkIndex(playerBounds.center).x + -xIndex, y, z));
-                    }
-
-                    for (int x = -xIndex + 1; x < xIndex; x++)
-                    {
-                        if (!Chunks.ContainsKey(new IntVector3(x, y, WorldCoordinateToChunkIndex(playerBounds.center).z + zIndex)))
-                            AddChunk(new IntVector3(x, y, WorldCoordinateToChunkIndex(playerBounds.center).z + zIndex));
-                        if (!Chunks.ContainsKey(new IntVector3(x, y, WorldCoordinateToChunkIndex(playerBounds.center).z + -zIndex)))
-                            AddChunk(new IntVector3(x, y, WorldCoordinateToChunkIndex(playerBounds.center).z + -zIndex));
-                    }
+                    if (!Chunks.ContainsKey(new IntVector3(x + playerPosition.x, y, z + playerPosition.z)))
+                        AddChunk(x + playerPosition.x, y, z + playerPosition.z);
                 }
             }
         }
+
+        //for (int x = 0; x < playerBounds.x / 2; x++)
+        //{
+        //    for (int y = 0; y < playerBounds.y; y++)
+        //    {
+        //        for (int z = 0; z < playerBounds.z / 2; z++)
+        //        {
+        //            if (!Chunks.ContainsKey(new IntVector3(x + playerPosition.x, y, z + playerPosition.z)))
+        //                AddChunk(x + playerPosition.x, y, z + playerPosition.z);
+
+        //            if (x != 0 && z != 0)
+        //            {
+        //                if (!Chunks.ContainsKey(new IntVector3(-x + playerPosition.x, y, z + playerPosition.z)))
+        //                    AddChunk(-x + playerPosition.x, y, z + playerPosition.z); ;
+
+        //                if (!Chunks.ContainsKey(new IntVector3(x + playerPosition.x, y, -z + playerPosition.z)))
+        //                    AddChunk(x + playerPosition.x, y, -z + playerPosition.z);
+
+
+        //                if (!Chunks.ContainsKey(new IntVector3(-x + playerPosition.x, y, -z + playerPosition.z)))
+        //                    AddChunk(-x + playerPosition.x, y, -z + playerPosition.z);
+        //            }
+        //        }
+        //    }
+        //}
+
+        if (!loading)
+        {
+            Bounds bounds = new Bounds(player.transform.position, _worldAnchors[0].AnchorBounds.ToVector3() * Chunk.chunkSize);
+
+            var tempArr = Chunks.ToArray();
+            foreach (var kvp in tempArr)
+            {
+                if (!bounds.Contains(kvp.Value.ChunkPosition.ToVector3()))
+                {
+                    RemoveChunk(kvp.Key);
+                }
+            }
+        }
+
+
+
+        //int xIndex = 0;
+        //int zIndex = 0;
+        //int maxIndex = Mathf.Max(playerBounds.x, playerBounds.z);
+        //for (int i = 0; i < maxIndex; i++, xIndex = Mathf.Min(xIndex + 1, (int)playerBounds.x), zIndex = Mathf.Min(zIndex + 1, (int)playerBounds.z))
+        //{
+        //    for (int y = 0; y < ChunksY; y++)
+        //    {
+        //        if (zIndex == 0 && xIndex == 0 && !Chunks.ContainsKey(new IntVector3(0, y, 0)))
+        //            AddChunk(new IntVector3(0, y, 0));
+        //        else
+        //        {
+        //            for (int z = -zIndex; z < zIndex + 1; z++)
+        //            {
+        //                if (!Chunks.ContainsKey(new IntVector3(_lastPositionIndex.x + xIndex, y, z + _lastPositionIndex.z)))
+        //                    AddChunk(new IntVector3(xIndex + _lastPositionIndex.x, y, z + _lastPositionIndex.z));
+        //                if (!Chunks.ContainsKey(new IntVector3(-xIndex + _lastPositionIndex.x, y, z + _lastPositionIndex.z)))
+        //                    AddChunk(new IntVector3(-xIndex + _lastPositionIndex.x, y, z + _lastPositionIndex.z));
+        //            }
+
+        //            for (int x = -xIndex + 1; x < xIndex; x++)
+        //            {
+        //                if (!Chunks.ContainsKey(new IntVector3(x + _lastPositionIndex.x, y, zIndex + _lastPositionIndex.z)))
+        //                    AddChunk(new IntVector3(x + _lastPositionIndex.x, y, zIndex + _lastPositionIndex.z));
+        //                if (!Chunks.ContainsKey(new IntVector3(x + _lastPositionIndex.x, y, -zIndex + _lastPositionIndex.z)))
+        //                    AddChunk(new IntVector3(x + _lastPositionIndex.x, y, -zIndex + _lastPositionIndex.z));
+        //            }
+        //        }
+        //    }
+        //}
+
     }
+
 
     #region Debug
 
-    public int centerX = 0;
     void OnDrawGizmos()
     {
-        Gizmos.color = Color.green;
-        if (posindexX == 0)
-            Gizmos.DrawWireCube(new Vector3(0, 0, 0), new Vector3(16, 16, 16));
-        else
-        {
-            Gizmos.color = Color.green;
-            for (int z = -posindexZ; z < posindexZ + 1; z++)
-            {
-                Gizmos.DrawWireCube(new Vector3((posindexX + centerX) * Chunk.chunkSize, 0, (z + centerX) * Chunk.chunkSize), new Vector3(Chunk.chunkSize, Chunk.chunkSize, Chunk.chunkSize));
-                Gizmos.DrawWireCube(new Vector3((-posindexX + centerX) * Chunk.chunkSize, 0, (z + centerX) * Chunk.chunkSize), new Vector3(Chunk.chunkSize, Chunk.chunkSize, Chunk.chunkSize));
-            }
+        //if (player.transform != null)
+        //{
+        //    Gizmos.color = Color.green;
+        //    if (posindexX == 0)
+        //        Gizmos.DrawWireCube(new Vector3(0, 0, 0), new Vector3(16, 16, 16));
+        //    else
+        //    {
+        //        Gizmos.color = Color.green;
+        //        for (int z = -posindexZ; z < posindexZ + 1; z++)
+        //        {
+        //            Gizmos.DrawWireCube(new Vector3((posindexX * Chunk.chunkSize) + player.transform.position.x, 0, z * Chunk.chunkSize + player.transform.position.z), new Vector3(Chunk.chunkSize, Chunk.chunkSize, Chunk.chunkSize));
+        //            Gizmos.DrawWireCube(new Vector3(-posindexX * Chunk.chunkSize + player.transform.position.x, 0, z * Chunk.chunkSize + player.transform.position.z), new Vector3(Chunk.chunkSize, Chunk.chunkSize, Chunk.chunkSize));
+        //        }
 
-            Gizmos.color = Color.magenta;
-            for (int x = -posindexX + 1; x < posindexX; x++)
-            {
-                Gizmos.DrawWireCube(new Vector3((x + centerX) * Chunk.chunkSize, 0, (posindexZ + centerX) * Chunk.chunkSize), new Vector3(Chunk.chunkSize, Chunk.chunkSize, Chunk.chunkSize));
-                Gizmos.DrawWireCube(new Vector3((x + centerX) * Chunk.chunkSize, 0, (-posindexZ + centerX) * Chunk.chunkSize), new Vector3(Chunk.chunkSize, Chunk.chunkSize, Chunk.chunkSize));
-            }
+        //        Gizmos.color = Color.magenta;
+        //        for (int x = -posindexX + 1; x < posindexX; x++)
+        //        {
+        //            Gizmos.DrawWireCube(new Vector3(x * Chunk.chunkSize + player.transform.position.x, 0, posindexZ * Chunk.chunkSize + player.transform.position.z), new Vector3(Chunk.chunkSize, Chunk.chunkSize, Chunk.chunkSize));
+        //            Gizmos.DrawWireCube(new Vector3(x * Chunk.chunkSize + player.transform.position.x, 0, -posindexZ * Chunk.chunkSize + player.transform.position.z), new Vector3(Chunk.chunkSize, Chunk.chunkSize, Chunk.chunkSize));
+        //        }
 
-        }
+        //    }
+        //}
 
         Gizmos.color = Color.red;
         if (_worldAnchors == null)
             return;
         foreach (IWorldAnchor anchor in _worldAnchors)
         {
-            Gizmos.DrawWireCube(anchor.WorldBounds.center, anchor.WorldBounds.extents * 2);
+            Gizmos.DrawWireCube(anchor.AnchorPosition.ToVector3(), anchor.AnchorBounds.ToVector3() * Chunk.chunkSize);
         }
 
 
@@ -216,12 +274,23 @@ public class World : MonoBehaviour
         return AddChunk(index.x, index.y, index.z);
     }
 
+    void RemoveChunk(int x, int y, int z)
+    {
+        IChunk chunk;
+        if (Chunks.TryGetValue(new IntVector3(x, y, z), out chunk))
+        {
+            Chunks.Remove(chunk.ChunkIndex);
+            Destroy((chunk as MonoBehaviour).gameObject);
+        }
+    }
+
+    void RemoveChunk(IntVector3 index)
+    {
+        RemoveChunk(index.x, index.y, index.z);
+    }
+
     IEnumerator UpdateChunks()
     {
-        yield return new WaitForEndOfFrame();
-
-        loading = true;
-
         yield return new WaitForEndOfFrame();
 
         StartCoroutine(PlacePlayer());

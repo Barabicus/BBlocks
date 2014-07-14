@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System;
 
 public class Player : Entity, IWorldAnchor
 {
@@ -14,6 +15,7 @@ public class Player : Entity, IWorldAnchor
     private Vector3 vel;
     private const int cursorWidth = 20;
     private Texture2D cursor;
+    private Type currentBlock = typeof(StoneBlock);
 
 
     public CharacterController controller;
@@ -56,6 +58,17 @@ public class Player : Entity, IWorldAnchor
     // Update is called once per frame
     void Update()
     {
+
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            Application.Quit();
+        }
+
+        if (Input.GetKeyDown(KeyCode.Alpha1))
+            currentBlock = typeof(VirusBlock);
+        if (Input.GetKeyDown(KeyCode.Alpha2))
+            currentBlock = typeof(StoneBlock);
+
         if (Input.GetKeyDown(KeyCode.T))
         {
             Screen.lockCursor = !Screen.lockCursor;
@@ -67,15 +80,8 @@ public class Player : Entity, IWorldAnchor
 
         vel = Vector3.Lerp(vel, new Vector3(0, -gravity, 0) + new Vector3(0, vel.y, 0), Time.deltaTime * drag);
 
-        //  vel = Vector3.zero;
-        //  vel += (new Vector3(transform.forward.x, 0, transform.forward.z))* Input.GetAxis("Vertical") * movePower;
-      //  vel.x = transform.forward.x * Input.GetAxis("Vertical") * movePower;
-      //  vel.z = transform.forward.z * Input.GetAxis("Vertical") * movePower;
         vel += Quaternion.Euler(0, transform.localEulerAngles.y, transform.localEulerAngles.z) * Vector3.forward * Input.GetAxis("Vertical") * movePower;
         vel += Quaternion.Euler(0, transform.localEulerAngles.y, transform.localEulerAngles.z) * Vector3.right * Input.GetAxis("Horizontal") * movePower;
-
-
-    //   vel += transform.right * Input.GetAxis("Horizontal") * movePower;
 
         if (controller.isGrounded)
         {
@@ -120,7 +126,7 @@ public class Player : Entity, IWorldAnchor
             if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit, 100f))
             {
                     IntVector3 position = world.RaycastHitToFace(hit);
-                    world.SetBlockWorldCoordinate(position, new VirusBlock());
+                    world.SetBlockWorldCoordinate(position, (IBlock)Activator.CreateInstance(currentBlock));
               //  IntVector3 position = world.RaycastHitToBlock(hit);
              //   Debug.Log("Block: " + world.GetBlockWorldCoordinate(position));
 
@@ -153,10 +159,16 @@ public class Player : Entity, IWorldAnchor
     void OnGUI()
     {
         GUI.DrawTexture(new Rect((Screen.width / 2) - cursorWidth / 2, (Screen.height / 2) - cursorWidth / 2, cursorWidth, cursorWidth), cursor);
+
     }
 
-    public Bounds WorldBounds
+    public IntVector3 AnchorPosition
     {
-        get { return new Bounds(transform.position, new Vector3(Chunk.chunkSize * 6, Chunk.chunkSize * 8, Chunk.chunkSize * 6)); }
+        get { return new IntVector3(transform.position); }
+    }
+
+    public IntVector3 AnchorBounds
+    {
+        get { return new IntVector3(28, 10, 28); }
     }
 }
